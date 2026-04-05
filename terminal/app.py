@@ -1,6 +1,6 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, DataTable, Input, Static
-from textual.containers import Horizontal, VerticalScroll
+from textual.widgets import Header, Footer, DataTable, Input, Static, Select, Button, Label
+from textual.containers import Horizontal, VerticalScroll, Container
 
 from productos import (
     obtener_productos,
@@ -18,9 +18,6 @@ from ventas import (
 from ticket import generar_ticket, guardar_ticket
 
 
-# =========================
-# 🔊 BEEP SIMPLE
-# =========================
 def beep():
     print("\a", end="", flush=True)
 
@@ -44,24 +41,28 @@ class POSApp(App):
     DataTable {
         height: 100%;
     }
+
+    #pago {
+        background: #111;
+        border: solid green;
+        padding: 1;
+        height: 12;
+    }
     """
 
     def compose(self) -> ComposeResult:
         yield Header()
 
-        # 💰 TOTAL GRANDE
         self.total_display = Static("TOTAL: $0", id="total")
         yield self.total_display
 
         with Horizontal():
 
-            # 📦 PRODUCTOS
             with VerticalScroll():
                 self.tabla = DataTable()
                 self.tabla.add_columns("Código", "Nombre", "Precio", "Stock")
                 yield self.tabla
 
-            # 🛒 CARRITO
             self.carrito = DataTable()
             self.carrito.add_columns("Producto", "Cant", "Precio", "Subtotal")
             yield self.carrito
@@ -82,7 +83,7 @@ class POSApp(App):
         self.actualizar_info()
 
     # =========================
-    # INFO
+    # UI INFO
     # =========================
     def actualizar_info(self):
         self.info.update(
@@ -147,7 +148,7 @@ class POSApp(App):
         self.actualizar_info()
 
     # =========================
-    # INPUT
+    # INPUT PRODUCTOS
     # =========================
     def on_input_submitted(self, event: Input.Submitted):
         texto = event.value.strip()
@@ -191,15 +192,10 @@ class POSApp(App):
         self.actualizar_carrito()
 
         beep()
-
-        if producto["stock"] <= 5:
-            self.mensaje_temp(f"⚠️ Stock bajo: {producto['nombre']}")
-        else:
-            self.mensaje_temp(f"✔ {producto['nombre']} agregado")
+        self.mensaje_temp(f"✔ {producto['nombre']} agregado")
 
         self.input_codigo.value = ""
         self.input_codigo.focus()
-        self._confirm_exit = False
 
     # =========================
     # COBRAR
@@ -220,24 +216,87 @@ class POSApp(App):
         for item in self.items.values():
             agregar_item(self.venta_id, item, item["cantidad"])
 
+        self.mostrar_pago()
+
+    # =========================
+    # PAGO (FIX TEXTUAL)
+    # =========================
+    def mostrar_pago(self):
+
+        self.pago_ui = Container(id="pago")
+
+        # 🔥 IMPORTANTE: primero montar en app
+        self.mount(self.pago_ui)
+
+        self.metodo = Select(
+            options=[
+                ("Efectivo", "efectivo"),
+                ("Tarjeta", "tarjeta"),
+                ("QR", "qr"),
+                ("Transferencia", "transferencia")
+            ],
+            value="efectivo"
+        )
+
+        self.input_efectivo = Input(placeholder="Monto recibido (solo efectivo)")
+        self.lbl_cambio = Label("")
+
+        btn = Button("Confirmar pago")
+
+        self.pago_ui.mount(self.metodo)
+        self.pago_ui.mount(self.input_efectivo)
+        self.pago_ui.mount(self.lbl_cambio)
+        self.pago_ui.mount(btn)
+
+        btn.on_click = self.confirmar_pago
+
+    # =========================
+    # CONFIRMAR PAGO
+    # =========================
+    def confirmar_pago(self):
+
+        metodo = self.metodo.value
+        entregado = 0
+        vuelto = 0
+
+        if metodo == "efectivo":
+            try:
+                entregado = float(self.input_efectivo.value)
+                vuelto = entregado - self.total
+            except:
+                beep()
+                self.mensaje_temp("⚠️ Monto inválido")
+                return
+
+            self.lbl_cambio.update(f"Cambio: ${vuelto}")
+
         cerrar_venta(self.venta_id, self.total, self.items.values())
-        registrar_pago(self.venta_id, self.total)
+
+        registrar_pago(
+            self.venta_id,
+            metodo,
+            self.total,
+            entregado,
+            vuelto
+        )
 
         ticket_texto = generar_ticket(self.items.values(), self.total, self.venta_id)
-        archivo = guardar_ticket(ticket_texto, self.venta_id)
+        guardar_ticket(ticket_texto, self.venta_id)
 
         print("\n" + ticket_texto + "\n")
 
         beep()
+        self.mensaje_temp(f"✅ COBRADO ({metodo}) ${self.total}", 3)
 
-        self.mensaje_temp(f"✅ COBRADO: ${self.total}", 3)
+        # limpiar UI pago
+        self.pago_ui.remove()
 
         self.nueva_venta()
         self.carrito.clear()
         self.cargar_productos()
 
     # =========================
-    # BORRAR
+    # BORRAR ITEM
     # =========================
     def key_f3(self):
         if not self.orden:
