@@ -3,14 +3,12 @@ from textual.widgets import Header, Footer, DataTable, Input, Static, Button
 from textual.containers import Vertical, Horizontal
 from textual import events
 from textual.screen import Screen
-import os
 from datetime import datetime
 
 from productos import (
     obtener_productos,
     crear_producto,
-    buscar_producto_por_codigo,
-    actualizar_producto
+    buscar_producto_por_codigo
 )
 from db import get_connection
 
@@ -108,13 +106,16 @@ class FormularioScreen(Screen):
     
     def on_mount(self):
         if self.modo == "editar" and self.producto:
-            self.input_codigo.value = self.producto["codigo"]
-            self.input_nombre.value = self.producto["nombre"]
-            self.input_descripcion.value = self.producto.get("descripcion", "")
-            self.input_precio.value = str(self.producto["precio"])
-            self.input_costo.value = str(self.producto.get("costo", 0))
-            self.input_stock.value = str(self.producto["stock"])
-            self.input_imagen.value = self.producto.get("imagen", "")
+            self.input_codigo.value = str(self.producto.get("codigo", ""))
+            self.input_nombre.value = str(self.producto.get("nombre", ""))
+            # Manejar None correctamente
+            descripcion = self.producto.get("descripcion")
+            self.input_descripcion.value = str(descripcion) if descripcion is not None else ""
+            self.input_precio.value = str(self.producto.get("precio", "0"))
+            self.input_costo.value = str(self.producto.get("costo", "0"))
+            self.input_stock.value = str(self.producto.get("stock", "0"))
+            imagen = self.producto.get("imagen")
+            self.input_imagen.value = str(imagen) if imagen is not None else ""
             self.input_codigo.disabled = True
         else:
             self.input_codigo.disabled = False
@@ -150,23 +151,20 @@ class FormularioScreen(Screen):
                 self.info.update("❌ Código y nombre son obligatorios")
                 return
             
-            conn = get_connection()
-            with conn.cursor() as cursor:
-                if self.modo == "crear":
-                    cursor.execute("""
-                        INSERT INTO productos (codigo, nombre, descripcion, precio, costo, stock, imagen, activo, creado_en)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, 1, %s)
-                    """, (codigo, nombre, descripcion, precio, costo, stock, imagen, datetime.now()))
-                    self.app.mensaje_info.update("✅ Producto creado")
-                else:
+            if self.modo == "crear":
+                crear_producto(codigo, nombre, precio, costo, stock, imagen, descripcion)
+                self.app.mensaje_info.update("✅ Producto creado")
+            else:
+                conn = get_connection()
+                with conn.cursor() as cursor:
                     cursor.execute("""
                         UPDATE productos 
                         SET nombre=%s, descripcion=%s, precio=%s, costo=%s, stock=%s, imagen=%s
                         WHERE codigo=%s
                     """, (nombre, descripcion, precio, costo, stock, imagen, codigo))
-                    self.app.mensaje_info.update("✅ Producto actualizado")
+                conn.commit()
+                self.app.mensaje_info.update("✅ Producto actualizado")
             
-            conn.commit()
             self.app.recargar_tabla()
             self.dismiss()
             
@@ -277,16 +275,17 @@ class GestionApp(App):
         self.tabla.clear()
         
         for p in productos:
-            estado = "🟢" if p["activo"] else "🔴"
+            estado = "🟢" if p.get("activo", 1) else "🔴"
             # Icono de imagen si tiene imagen asignada
-            icono_imagen = "🖼️" if p.get("imagen") else "📦"
+            tiene_imagen = p.get("imagen") and p["imagen"] is not None and p["imagen"].strip()
+            icono_imagen = "🖼️" if tiene_imagen else "📦"
             
             self.tabla.add_row(
                 icono_imagen,
-                p["codigo"],
-                p["nombre"],
-                f"${float(p['precio']):.2f}",
-                str(p["stock"]),
+                str(p.get("codigo", "")),
+                str(p.get("nombre", "")),
+                f"${float(p.get('precio', 0)):.2f}",
+                str(p.get("stock", 0)),
                 estado
             )
     
@@ -313,6 +312,7 @@ class GestionApp(App):
     def key_f1(self):
         """Crear nuevo producto"""
         self.push_screen(FormularioScreen("crear"))
+        self.recargar_tabla()
     
     def key_f2(self):
         """Editar producto seleccionado"""
