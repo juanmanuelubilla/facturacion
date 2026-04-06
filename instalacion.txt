@@ -5,7 +5,7 @@ sudo apt install python3-venv python3-pip python-is-python3 -y
 sudo apt install libmariadb-dev libmariadb-dev-compat build-essential pkg-config
 python3 -m venv venv --upgrade-deps
 python -m pip install --upgrade pip
-pip install pymysql PyQt6 textual tabulate simpleaudio mariadb
+pip install pymysql PyQt6 textual tabulate simpleaudio mariadb textual-image[textual] Pillow
 
 
 
@@ -18,6 +18,6 @@ python3 -m venv venv
 #PARA ACTIVARLO
 source venv/bin/activate
 
-cd facturacion
+cd facturacion/terminal
 
 python

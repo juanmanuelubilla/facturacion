@@ -7,7 +7,7 @@ from productos import descontar_stock
 def crear_venta():
     conn = get_connection()
     with conn.cursor() as cursor:
-        cursor.execute("INSERT INTO ventas (total) VALUES (0)")
+        cursor.execute("INSERT INTO ventas (total, ganancia) VALUES (0, 0)")
         venta_id = cursor.lastrowid
     conn.commit()
     return venta_id
@@ -19,33 +19,50 @@ def crear_venta():
 def agregar_item(venta_id, item, cantidad):
     conn = get_connection()
     with conn.cursor() as cursor:
+
+        precio = float(item.get("precio", 0))
+        costo = float(item.get("costo", 0))
+        subtotal = precio * cantidad
+
         cursor.execute("""
             INSERT INTO venta_items 
-            (venta_id, producto_id, cantidad, precio_unitario, subtotal)
-            VALUES (%s, %s, %s, %s, %s)
+            (venta_id, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             venta_id,
             item["id"],
             cantidad,
-            item["precio"],
-            item["precio"] * cantidad
+            precio,
+            costo,
+            subtotal
         ))
+
     conn.commit()
 
 
 # =========================
-# CERRAR VENTA (DESCUENTA STOCK)
+# CERRAR VENTA
 # =========================
 def cerrar_venta(venta_id, total, items):
     conn = get_connection()
     with conn.cursor() as cursor:
 
-        cursor.execute("""
-            UPDATE ventas SET total=%s WHERE id=%s
-        """, (total, venta_id))
+        ganancia_total = 0
 
         for item in items:
-            descontar_stock(item["id"], item["cantidad"])
+            precio = float(item.get("precio", 0))
+            costo = float(item.get("costo", 0))
+            cantidad = item.get("cantidad", 0)
+
+            ganancia_total += (precio - costo) * cantidad
+
+            descontar_stock(item["id"], cantidad)
+
+        cursor.execute("""
+            UPDATE ventas 
+            SET total=%s, ganancia=%s
+            WHERE id=%s
+        """, (total, ganancia_total, venta_id))
 
     conn.commit()
 
@@ -53,11 +70,17 @@ def cerrar_venta(venta_id, total, items):
 # =========================
 # REGISTRAR PAGO
 # =========================
-def registrar_pago(venta_id, monto):
+def registrar_pago(venta_id, monto, metodo_pago='EFECTIVO', entregado=0, vuelto=0):
     conn = get_connection()
     with conn.cursor() as cursor:
         cursor.execute("""
-            INSERT INTO pagos (venta_id, metodo, monto)
-            VALUES (%s, 'EFECTIVO', %s)
-        """, (venta_id, monto))
+            INSERT INTO pagos (venta_id, metodo, monto, entregado, vuelto, estado)
+            VALUES (%s, %s, %s, %s, %s, 'completado')
+        """, (
+            venta_id,
+            metodo_pago,
+            monto,
+            entregado,
+            vuelto
+        ))
     conn.commit()
