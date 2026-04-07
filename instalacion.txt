@@ -18,6 +18,6 @@ python3 -m venv venv
 #PARA ACTIVARLO
 source venv/bin/activate
 
-cd facturacion/terminal
+cd facturacion
 
-python
+python main.py
