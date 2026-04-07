@@ -8,7 +8,8 @@ import sys
 # Importaciones de lógica
 from productos import obtener_productos, buscar_producto_por_codigo, buscar_productos_por_nombre
 from ventas import crear_venta, agregar_item, cerrar_venta, registrar_pago
-# from ticket import generar_ticket, guardar_ticket  # Descomentar si usas tickets
+# --- RESTAURADO: Sistema de Ticket (Sincronizado con tu ticket.py) ---
+from ticket import generar_ticket, guardar_ticket 
 
 def beep():
     print("\a", end="", flush=True)
@@ -17,22 +18,16 @@ class POSApp:
     def __init__(self, root, nombre_negocio="NEXUS", usuario_id=1):
         self.root = root
         self.usuario_id = usuario_id  
-        # --- NUEVO: Obtener nombre real del usuario ---
+        self.nombre_negocio = nombre_negocio 
         self.usuario_nombre = self.obtener_nombre_usuario(usuario_id)
         
         self.root.title(f"{nombre_negocio.upper()} - Terminal de Ventas")
         self.root.geometry("1450x900")
         
         self.colors = {
-            'bg_main': '#121212',      
-            'bg_panel': '#1e1e1e',     
-            'accent': '#00a8ff',       
-            'success': '#00db84',      
-            'danger': '#ff4757',
-            'warning': '#f39c12', # Naranja para Vaciar
-            'text_main': '#ffffff',    
-            'text_dim': '#a0a0a0',     
-            'border': '#333333'        
+            'bg_main': '#121212', 'bg_panel': '#1e1e1e', 'accent': '#00a8ff',       
+            'success': '#00db84', 'danger': '#ff4757', 'warning': '#f39c12',
+            'text_main': '#ffffff', 'text_dim': '#a0a0a0', 'border': '#333333'        
         }
 
         self.imagenes_cache = {}
@@ -72,21 +67,15 @@ class POSApp:
         main_container = tk.Frame(self.root, bg=self.colors['bg_main'], padx=20, pady=20)
         main_container.pack(fill=tk.BOTH, expand=True)
 
-        # --- HEADER ---
         header = tk.Frame(main_container, bg=self.colors['bg_main'])
         header.pack(fill=tk.X, pady=(0, 20))
-        
         tk.Label(header, text=nombre_negocio.upper(), font=('Segoe UI', 22, 'bold'), bg=self.colors['bg_main'], fg=self.colors['accent']).pack(side=tk.LEFT)
-        
-        # Etiqueta de Usuario (Derecha)
         u_frame = tk.Frame(header, bg='#252525', padx=15, pady=8, highlightthickness=1, highlightbackground=self.colors['border'])
         u_frame.pack(side=tk.RIGHT)
         tk.Label(u_frame, text=f"👤 CAJERO: {self.usuario_nombre}", font=('Segoe UI', 10, 'bold'), bg='#252525', fg=self.colors['success']).pack()
 
-        # --- INDICADORES ---
         indicadores = tk.Frame(main_container, bg=self.colors['bg_main'])
         indicadores.pack(fill=tk.X, pady=(0, 20))
-
         card_total = tk.Frame(indicadores, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1)
         card_total.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         tk.Label(card_total, text="TOTAL A COBRAR", font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(pady=(15, 0))
@@ -99,10 +88,8 @@ class POSApp:
         self.vuelto_label = tk.Label(card_vuelto, text="", font=('Segoe UI', 48, 'bold'), bg=self.colors['bg_panel'], fg='#ffc107')
         self.vuelto_label.pack(pady=(0, 15))
 
-        # --- TABLAS ---
         content = tk.Frame(main_container, bg=self.colors['bg_main'])
         content.pack(fill=tk.BOTH, expand=True)
-
         cat_frame = tk.Frame(content, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1)
         cat_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         self.tabla = ttk.Treeview(cat_frame, columns=("SKU", "Nombre", "Precio", "Stock"), show="tree headings", style="Custom.Treeview")
@@ -122,7 +109,6 @@ class POSApp:
         self.carrito.heading("Sub", text="SUBTOTAL"); self.carrito.column("Sub", width=110, anchor="e")
         self.carrito.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
-        # --- FOOTER ---
         footer = tk.Frame(main_container, bg=self.colors['bg_main'], pady=20)
         footer.pack(fill=tk.X)
         self.input_codigo = tk.Entry(footer, font=('Segoe UI', 18), bg="#252525", fg="white", insertbackground="white", borderwidth=0, highlightthickness=1, highlightbackground=self.colors['border'])
@@ -230,13 +216,11 @@ class POSApp:
         ref_win = tk.Toplevel(parent); ref_win.geometry("400x300"); ref_win.configure(bg=self.colors['bg_panel'])
         tk.Label(ref_win, text=f"REFERENCIA {metodo}", font=('Segoe UI', 10, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=30)
         entry_ref = tk.Entry(ref_win, font=('Segoe UI', 16), justify='center'); entry_ref.pack(pady=10, padx=50, fill=tk.X); entry_ref.focus()
-        
         def confirmar():
             ref = entry_ref.get().strip()
             if not ref: return
             ref_win.destroy(); parent.destroy()
             self.procesar_pago(metodo, referencia=ref)
-        
         tk.Button(ref_win, text="CONFIRMAR", command=confirmar, bg=self.colors['success'], font=('Segoe UI', 11, 'bold')).pack(pady=20)
         entry_ref.bind('<Return>', lambda e: confirmar())
 
@@ -244,7 +228,6 @@ class POSApp:
         dialog = tk.Toplevel(self.root); dialog.geometry("400x350"); dialog.configure(bg=self.colors['bg_panel'])
         tk.Label(dialog, text="MONTO RECIBIDO", font=('Segoe UI', 12, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=30)
         entry = tk.Entry(dialog, font=('Segoe UI', 24), justify='center'); entry.pack(pady=10, padx=50, fill=tk.X); entry.focus()
-        
         def confirmar():
             try:
                 rec = Decimal(entry.get().replace(',', '.'))
@@ -256,12 +239,36 @@ class POSApp:
 
     def procesar_pago(self, metodo, referencia=None):
         try:
-            for item in self.items.values(): agregar_item(self.venta_id, item, item["cantidad"])
+            for item in self.items.values(): 
+                agregar_item(self.venta_id, item, item["cantidad"])
+            
             cerrar_venta(self.venta_id, float(self.total), self.items.values())
             met_f = f"{metodo} (Ref: {referencia})" if referencia else metodo
             registrar_pago(self.venta_id, float(self.total), met_f, float(self.total + self.vuelto), float(self.vuelto))
+            
+            # --- SINCRONIZADO CON TU TICKET.PY ---
+            try:
+                # Convertimos el diccionario items al formato de lista que espera ticket.py
+                lista_items_ticket = list(self.items.values())
+                
+                # Tu función pide: (items, total, venta_id, metodo_pago, vuelto)
+                ticket_texto = generar_ticket(
+                    lista_items_ticket, 
+                    float(self.total), 
+                    self.venta_id, 
+                    metodo, 
+                    float(self.vuelto)
+                )
+                
+                # Tu función pide: (texto, venta_id)
+                guardar_ticket(ticket_texto, self.venta_id)
+                
+            except Exception as ticket_err:
+                print(f"Error ticket: {ticket_err}")
+            # ------------------------------------
+
             self.vuelto_label.config(text=f"$ {float(self.vuelto):.2f}")
-            messagebox.showinfo("Éxito", "Venta Registrada")
+            messagebox.showinfo("Éxito", "Venta Registrada y Ticket Guardado")
             self.nueva_venta(); self.actualizar_carrito(); self.cargar_productos()
         except Exception as e: messagebox.showerror("Error", str(e))
 
@@ -277,7 +284,6 @@ class POSApp:
         if messagebox.askyesno("Salir", "¿Cerrar?"): self.root.destroy()
 
 if __name__ == "__main__":
-    # Fix para que abra siempre
     neg = sys.argv[1] if len(sys.argv) > 1 else "NEXUS"
     uid = sys.argv[2] if len(sys.argv) > 2 else 1
     root = tk.Tk()
