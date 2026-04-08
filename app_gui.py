@@ -3,13 +3,18 @@ from tkinter import ttk, messagebox
 from decimal import Decimal
 from PIL import Image, ImageTk
 import os
-import sys
+import qrcode  # Nueva librería para el QR
 
 # Importaciones de lógica propia
 from productos import obtener_productos, buscar_producto_por_codigo, buscar_productos_por_nombre, validar_cupon
 from ventas import crear_venta, agregar_item, cerrar_venta, registrar_pago
 from ticket import generar_ticket, guardar_ticket 
 from db import get_connection
+# Importamos la función de MP (asegurate de crear el archivo pagos_mp.py)
+try:
+    from pagos_mp import generar_qr_mercadopago
+except ImportError:
+    generar_qr_mercadopago = None
 
 def beep():
     print("\a", end="", flush=True)
@@ -30,7 +35,8 @@ class POSApp:
         self.colors = {
             'bg_main': '#121212', 'bg_panel': '#1e1e1e', 'accent': '#00a8ff',       
             'success': '#00db84', 'danger': '#ff4757', 'warning': '#f39c12',
-            'promo': '#9c27b0', 'text_main': '#ffffff', 'text_dim': '#a0a0a0', 'border': '#333333'        
+            'promo': '#9c27b0', 'mp_blue': '#009ee3', 'text_main': '#ffffff', 
+            'text_dim': '#a0a0a0', 'border': '#333333'        
         }
 
         self.imagenes_cache = {}
@@ -39,7 +45,6 @@ class POSApp:
         self.items = {}
         self.orden = []
         self.vuelto = Decimal('0')
-        self.descuento_aplicado = Decimal('0')
         self.combos_aplicados = set() 
         
         self.setup_styles()
@@ -75,6 +80,7 @@ class POSApp:
         header = tk.Frame(main_container, bg=self.colors['bg_main'])
         header.pack(fill=tk.X, pady=(0, 20))
         tk.Label(header, text=nombre_negocio.upper(), font=('Segoe UI', 22, 'bold'), bg=self.colors['bg_main'], fg=self.colors['accent']).pack(side=tk.LEFT)
+        
         u_frame = tk.Frame(header, bg='#252525', padx=15, pady=8, highlightthickness=1, highlightbackground=self.colors['border'])
         u_frame.pack(side=tk.RIGHT)
         tk.Label(u_frame, text=f"USUARIO: {self.usuario_nombre}", font=('Segoe UI', 10, 'bold'), bg='#252525', fg=self.colors['success']).pack()
@@ -179,25 +185,8 @@ class POSApp:
             self.items[sku] = {"id": producto["id"], "nombre": producto["nombre"], "cantidad": 1, "precio": precio, "subtotal": precio, "imagen": producto.get("imagen")}
         
         self.orden.append(sku); self.total += precio
-        self.verificar_combos_automaticos()
         self.actualizar_carrito()
         beep(); self.input_codigo.delete(0, tk.END)
-
-    def verificar_combos_automaticos(self):
-        ids_actuales = [str(item['id']) for item in self.items.values()]
-        try:
-            conn = get_connection()
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT id, nombre_promo, productos_ids, descuento_porcentaje FROM promociones_combos WHERE activo = 1")
-                for combo in cursor.fetchall():
-                    if combo['id'] in self.combos_aplicados: continue
-                    if all(pid in ids_actuales for pid in combo['productos_ids'].split(',')):
-                        monto_desc = self.total * (Decimal(str(combo['descuento_porcentaje'])) / 100)
-                        self.total -= monto_desc; self.combos_aplicados.add(combo['id'])
-                        messagebox.showinfo("Combo", f"Aplicado: {combo['nombre_promo']}")
-        except Exception as e: print(e)
-        finally: 
-            if 'conn' in locals() and conn: conn.close()
 
     def actualizar_carrito(self):
         for item in self.carrito.get_children(): self.carrito.delete(item)
@@ -216,7 +205,7 @@ class POSApp:
     def limpiar_carrito(self):
         if messagebox.askyesno("Vaciar", "¿Vaciar todo?"):
             self.items = {}; self.orden = []; self.total = Decimal('0')
-            self.combos_aplicados = set(); self.actualizar_carrito(); beep()
+            self.actualizar_carrito(); beep()
 
     def setup_keyboard_bindings(self):
         self.root.bind('<F2>', lambda e: self.key_f2())
@@ -252,9 +241,10 @@ class POSApp:
         def pay(m):
             dialog.destroy()
             if m == "EFECTIVO": self.mostrar_dialogo_efectivo()
+            elif m == "QR": self.mostrar_ventana_qr()
             else: self.procesar_pago(m)
 
-        opciones = [("EFECTIVO", self.colors['success']), ("TARJETA", self.colors['accent']), ("QR", self.colors['promo']), ("TRANSFERENCIA", "#0097e6")]
+        opciones = [("EFECTIVO", self.colors['success']), ("TARJETA", self.colors['accent']), ("QR", self.colors['mp_blue']), ("TRANSFERENCIA", "#0097e6")]
         for texto, color in opciones:
             tk.Button(dialog, text=f"PAGAR CON {texto}", command=lambda met=texto: pay(met), 
                       bg=color, fg="white", font=('Segoe UI', 11, 'bold'), relief="flat", pady=12, cursor="hand2").pack(fill=tk.X, padx=50, pady=8)
@@ -273,9 +263,35 @@ class POSApp:
         ent.bind('<Return>', lambda e: confirm())
         tk.Button(dialog, text="CONFIRMAR", command=confirm, bg=self.colors['success'], fg="white", font=('Segoe UI', 12, 'bold')).pack(pady=20)
 
+    # --- NUEVA FUNCIÓN MERCADO PAGO ---
+    def mostrar_ventana_qr(self):
+        if not generar_qr_mercadopago:
+            messagebox.showerror("Error", "Módulo pagos_mp.py no encontrado")
+            return
+
+        qr_data = generar_qr_mercadopago(self.venta_id, self.total)
+        if not qr_data:
+            messagebox.showerror("Error", "No se pudo conectar con Mercado Pago")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Mercado Pago QR")
+        win.geometry("400x550")
+        win.configure(bg=self.colors['mp_blue'])
+        win.grab_set()
+
+        tk.Label(win, text="ESCANEA EL QR", font=("Segoe UI", 16, "bold"), bg=self.colors['mp_blue'], fg="white").pack(pady=20)
+
+        # Generar imagen QR
+        qr_img = qrcode.make(qr_data).resize((300, 300))
+        self.img_qr_tk = ImageTk.PhotoImage(qr_img)
+        tk.Label(win, image=self.img_qr_tk, bg="white").pack(pady=10)
+
+        tk.Button(win, text="CONFIRMAR PAGO RECIBIDO", command=lambda: [win.destroy(), self.procesar_pago("QR")],
+                  bg=self.colors['success'], fg="white", font=("Segoe UI", 11, "bold"), pady=15).pack(fill=tk.X, padx=40, pady=25)
+
     def procesar_pago(self, metodo):
         try:
-            # 1. DB: Venta (Sin parámetros para evitar error 1054)
             if self.venta_id is None: self.venta_id = crear_venta()
             
             for item in self.items.values(): 
@@ -284,7 +300,7 @@ class POSApp:
             cerrar_venta(self.venta_id, float(self.total), self.items.values())
             registrar_pago(self.venta_id, float(self.total), metodo, float(self.total + self.vuelto), float(self.vuelto))
             
-            # 2. DB: Guardar en comprobante_afip (Nombre de tabla correcto)
+            # DB: Comprobante AFIP
             try:
                 conn = get_connection()
                 with conn.cursor() as cursor:
@@ -296,18 +312,18 @@ class POSApp:
                 conn.close()
             except Exception as e: print(f"Error tabla afip: {e}")
 
-            # 3. TICKET: Generación usando la conexión para leer datos fiscales
+            # TICKET
             try:
                 conn_t = get_connection()
                 txt = generar_ticket(conn_t, list(self.items.values()), float(self.total), self.venta_id, metodo, float(self.vuelto))
-                archivo = guardar_ticket(conn_t, txt, self.venta_id)
+                guardar_ticket(conn_t, txt, self.venta_id)
                 conn_t.close()
             except Exception as e: print(f"Error Ticket: {e}")
 
             if hasattr(self, 'vuelto_label'):
                 self.vuelto_label.config(text=f"$ {float(self.vuelto):.2f}")
             
-            messagebox.showinfo("EXITO", f"Venta {self.venta_id} Finalizada Correctamente")
+            messagebox.showinfo("EXITO", f"Venta {self.venta_id} Finalizada")
             self.nueva_venta()
         except Exception as e: 
             messagebox.showerror("Error", str(e))
@@ -316,13 +332,12 @@ class POSApp:
         try:
             self.venta_id = crear_venta()
             self.total = Decimal('0'); self.items = {}; self.orden = []; self.vuelto = Decimal('0')
-            self.descuento_aplicado = Decimal('0'); self.combos_aplicados = set()
             if hasattr(self, 'vuelto_label'): self.vuelto_label.config(text="")
             self.actualizar_carrito()
         except Exception as e: print(f"Error nueva venta: {e}")
 
     def confirm_exit(self):
-        if messagebox.askyesno("Salir", "¿Desea cerrar la terminal?"): self.root.destroy()
+        if messagebox.askyesno("Salir", "¿Desea cerrar?"): self.root.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()
