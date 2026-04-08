@@ -15,7 +15,8 @@ class NexusLauncher:
         
         self.colors = {
             'bg': '#121212', 'card': '#1e1e1e', 'accent': '#00a8ff',   
-            'success': '#00db84', 'settings': '#9c27b0', 'users': '#e67e22',    
+            'success': '#00db84', 'settings': '#9c27b0', 'users': '#e67e22',
+            'promo': '#f1c40f', # Color dorado para promociones
             'text': '#ffffff', 'text_dim': '#888888', 'border': '#333333'
         }
         
@@ -78,7 +79,7 @@ class NexusLauncher:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                cursor.execute("SELECT nombre, rol FROM usuarios WHERE nombre=%s AND password=%s", (user, pw_h))
+                cursor.execute("SELECT id, nombre, rol FROM usuarios WHERE nombre=%s AND password=%s", (user, pw_h))
                 res = cursor.fetchone()
                 if res:
                     self.usuario_actual = res 
@@ -91,8 +92,9 @@ class NexusLauncher:
             if 'conn' in locals(): conn.close()
 
     def abrir_dashboard(self):
+        # Aumentamos un poco el ancho para que quepa el nuevo botón de Promos
         self.create_widgets()
-        self.centrar_ventana(1200, 750)
+        self.centrar_ventana(1250, 750)
 
     def create_widgets(self):
         for widget in self.root.winfo_children(): widget.destroy()
@@ -109,11 +111,15 @@ class NexusLauncher:
         cards_frame.pack(expand=True)
 
         # 🛒 VENTAS: Visible para todos (Admin, Jefe, Cajero)
-        self.crear_modulo(cards_frame, "VENTAS", "Facturación rápida.", self.colors['success'], "app_gui.py", "🛒")
+        # Pasamos el ID del usuario como argumento adicional para app_gui.py
+        self.crear_modulo(cards_frame, "VENTAS", "Facturación rápida.", self.colors['success'], "app_gui.py", "🛒", extra_arg=str(self.usuario_actual['id']))
 
         # 📦 INVENTARIO: Solo Jefe y Admin
         if rol in ['jefe', 'admin']:
             self.crear_modulo(cards_frame, "INVENTARIO", "Stock y precios.", self.colors['accent'], "gestion_ui.py", "📦")
+            
+            # 🎟️ PROMOCIONES: NUEVO MÓDULO (Para Jefe y Admin)
+            self.crear_modulo(cards_frame, "PROMOS", "Cupones y Descuentos.", self.colors['promo'], "promociones_ui.py", "🎟️")
 
         # ⚙️ CONFIG Y PERSONAL: Solo Admin
         if rol == 'admin':
@@ -122,24 +128,30 @@ class NexusLauncher:
 
         tk.Button(self.root, text="⬅ CERRAR SESIÓN", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg="#444", relief="flat", command=self.mostrar_login).place(x=20, y=20)
 
-    def crear_modulo(self, master, titulo, desc, color, script, icono):
-        card = tk.Frame(master, bg=self.colors['card'], padx=20, pady=45, highlightthickness=1, highlightbackground=self.colors['border'])
-        card.pack(side=tk.LEFT, padx=15)
+    def crear_modulo(self, master, titulo, desc, color, script, icono, extra_arg=None):
+        card = tk.Frame(master, bg=self.colors['card'], padx=15, pady=40, highlightthickness=1, highlightbackground=self.colors['border'])
+        card.pack(side=tk.LEFT, padx=10)
         tk.Label(card, text=icono, font=('Segoe UI', 35), bg=self.colors['card'], fg=color).pack(pady=(0, 15))
         tk.Label(card, text=titulo, font=('Segoe UI', 14, 'bold'), bg=self.colors['card'], fg="white").pack()
-        tk.Label(card, text=desc, font=('Segoe UI', 9), bg=self.colors['card'], fg=self.colors['text_dim'], wraplength=150, justify="center").pack(pady=20)
-        tk.Button(card, text="INGRESAR", font=('Segoe UI', 8, 'bold'), bg=color, fg="white", relief="flat", padx=30, pady=12, command=lambda: self.lanzar_script(script)).pack()
+        tk.Label(card, text=desc, font=('Segoe UI', 9), bg=self.colors['card'], fg=self.colors['text_dim'], wraplength=140, justify="center").pack(pady=15)
+        
+        # El comando incluye el argumento extra si existe (ej. el usuario_id para ventas)
+        tk.Button(card, text="INGRESAR", font=('Segoe UI', 8, 'bold'), bg=color, fg="white", relief="flat", padx=30, pady=12, 
+                  command=lambda: self.lanzar_script(script, extra_arg)).pack()
 
-    def lanzar_script(self, archivo):
-        """Ejecuta el módulo pasando el nombre del negocio como argumento"""
+    def lanzar_script(self, archivo, extra_arg=None):
+        """Ejecuta el módulo pasando el nombre del negocio y opcionalmente el ID de usuario"""
         if os.path.exists(archivo):
             self.root.withdraw() # Oculta el panel principal
             try:
-                # Obtenemos el nombre actual de la configuración
                 nombre_enviar = self.config.get('nombre', 'NEXUS')
                 
-                # Ejecutamos pasando el argumento que app_gui.py y usuarios_ui.py esperan
-                subprocess.run(["python3", archivo, nombre_enviar])
+                # Preparamos los argumentos: [python3, archivo, nombre_negocio, (opcional) usuario_id]
+                cmd = ["python3", archivo, nombre_enviar]
+                if extra_arg:
+                    cmd.append(extra_arg)
+                
+                subprocess.run(cmd)
                 
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo abrir el módulo: {e}")
