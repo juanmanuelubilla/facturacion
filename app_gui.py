@@ -3,18 +3,20 @@ from tkinter import ttk, messagebox
 from decimal import Decimal
 from PIL import Image, ImageTk
 import os
-import qrcode  # Nueva librería para el QR
+import qrcode
 
 # Importaciones de lógica propia
 from productos import obtener_productos, buscar_producto_por_codigo, buscar_productos_por_nombre, validar_cupon
 from ventas import crear_venta, agregar_item, cerrar_venta, registrar_pago
 from ticket import generar_ticket, guardar_ticket 
 from db import get_connection
-# Importamos la función de MP (asegurate de crear el archivo pagos_mp.py)
+
+# Importamos las funciones del gestor de pagos unificado
 try:
-    from pagos_mp import generar_qr_mercadopago
+    from pagos_py import generar_qr_mercadopago, generar_qr_payway
 except ImportError:
     generar_qr_mercadopago = None
+    generar_qr_payway = None
 
 def beep():
     print("\a", end="", flush=True)
@@ -35,8 +37,8 @@ class POSApp:
         self.colors = {
             'bg_main': '#121212', 'bg_panel': '#1e1e1e', 'accent': '#00a8ff',       
             'success': '#00db84', 'danger': '#ff4757', 'warning': '#f39c12',
-            'promo': '#9c27b0', 'mp_blue': '#009ee3', 'text_main': '#ffffff', 
-            'text_dim': '#a0a0a0', 'border': '#333333'        
+            'promo': '#9c27b0', 'mp_blue': '#009ee3', 'pw_red': '#ee2e24',
+            'text_main': '#ffffff', 'text_dim': '#a0a0a0', 'border': '#333333'        
         }
 
         self.imagenes_cache = {}
@@ -45,7 +47,6 @@ class POSApp:
         self.items = {}
         self.orden = []
         self.vuelto = Decimal('0')
-        self.combos_aplicados = set() 
         
         self.setup_styles()
         self.create_widgets(nombre_negocio)
@@ -229,25 +230,59 @@ class POSApp:
     def key_f2(self):
         if self.items: self.mostrar_dialogo_metodo_pago()
 
+    # --- LÓGICA DE DETECCIÓN DINÁMICA DE PAGOS ---
+
+    def obtener_metodos_activos(self):
+        """Consulta la DB para ver qué pasarelas están configuradas."""
+        metodos = []
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT mp_access_token, pw_api_key FROM config_pagos WHERE id=1")
+                res = cursor.fetchone()
+                if res:
+                    if res.get('mp_access_token'): metodos.append("MERCADO PAGO")
+                    if res.get('pw_api_key'): metodos.append("PAYWAY")
+            conn.close()
+        except Exception as e:
+            print(f"Error verificando métodos: {e}")
+        return metodos
+
     def mostrar_dialogo_metodo_pago(self):
         dialog = tk.Toplevel(self.root)
         dialog.title("Finalizar Venta")
-        dialog.geometry("450x500")
+        dialog.geometry("450x600")
         dialog.configure(bg=self.colors['bg_panel'])
         dialog.transient(self.root); dialog.grab_set()
 
         tk.Label(dialog, text="METODO DE PAGO", font=('Segoe UI', 14, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=30)
 
-        def pay(m):
-            dialog.destroy()
-            if m == "EFECTIVO": self.mostrar_dialogo_efectivo()
-            elif m == "QR": self.mostrar_ventana_qr()
-            else: self.procesar_pago(m)
+        # Contenedor para organizar botones
+        f_btns = tk.Frame(dialog, bg=self.colors['bg_panel'])
+        f_btns.pack(fill=tk.BOTH, expand=True, padx=50)
 
-        opciones = [("EFECTIVO", self.colors['success']), ("TARJETA", self.colors['accent']), ("QR", self.colors['mp_blue']), ("TRANSFERENCIA", "#0097e6")]
-        for texto, color in opciones:
-            tk.Button(dialog, text=f"PAGAR CON {texto}", command=lambda met=texto: pay(met), 
-                      bg=color, fg="white", font=('Segoe UI', 11, 'bold'), relief="flat", pady=12, cursor="hand2").pack(fill=tk.X, padx=50, pady=8)
+        # Botones Fijos
+        self.crear_boton_pago(f_btns, "EFECTIVO", self.colors['success'], 
+                              lambda: [dialog.destroy(), self.mostrar_dialogo_efectivo()])
+        self.crear_boton_pago(f_btns, "TARJETA (POS FÍSICO)", self.colors['accent'], 
+                              lambda: [dialog.destroy(), self.procesar_pago("TARJETA")])
+
+        # Botones Dinámicos (QR)
+        activos = self.obtener_metodos_activos()
+        for metodo in activos:
+            if metodo == "MERCADO PAGO":
+                self.crear_boton_pago(f_btns, "QR MERCADO PAGO", self.colors['mp_blue'], 
+                                      lambda: [dialog.destroy(), self.mostrar_ventana_qr("MP")])
+            elif metodo == "PAYWAY":
+                self.crear_boton_pago(f_btns, "QR PAYWAY", self.colors['pw_red'], 
+                                      lambda: [dialog.destroy(), self.mostrar_ventana_qr("PAYWAY")])
+
+        self.crear_boton_pago(f_btns, "TRANSFERENCIA", "#0097e6", 
+                              lambda: [dialog.destroy(), self.procesar_pago("TRANSFERENCIA")])
+
+    def crear_boton_pago(self, master, texto, color, comando):
+        tk.Button(master, text=f"PAGAR CON {texto}", command=comando, bg=color, fg="white", 
+                  font=('Segoe UI', 11, 'bold'), relief="flat", pady=12, cursor="hand2").pack(fill=tk.X, pady=5)
 
     def mostrar_dialogo_efectivo(self):
         dialog = tk.Toplevel(self.root); dialog.geometry("400x300"); dialog.configure(bg=self.colors['bg_panel'])
@@ -263,32 +298,43 @@ class POSApp:
         ent.bind('<Return>', lambda e: confirm())
         tk.Button(dialog, text="CONFIRMAR", command=confirm, bg=self.colors['success'], fg="white", font=('Segoe UI', 12, 'bold')).pack(pady=20)
 
-    # --- NUEVA FUNCIÓN MERCADO PAGO ---
-    def mostrar_ventana_qr(self):
-        if not generar_qr_mercadopago:
-            messagebox.showerror("Error", "Módulo pagos_mp.py no encontrado")
+    def mostrar_ventana_qr(self, pasarela):
+        """Muestra ventana de QR según la pasarela elegida (MP o PAYWAY)"""
+        if not generar_qr_mercadopago or not generar_qr_payway:
+            messagebox.showerror("Error", "Módulo de pagos no encontrado")
             return
 
-        qr_data = generar_qr_mercadopago(self.venta_id, self.total)
+        # Obtener data según pasarela
+        if pasarela == "MP":
+            qr_data = generar_qr_mercadopago(self.venta_id, self.total)
+            color_tema = self.colors['mp_blue']
+        else:
+            qr_data = generar_qr_payway(self.venta_id, self.total)
+            color_tema = self.colors['pw_red']
+
         if not qr_data:
-            messagebox.showerror("Error", "No se pudo conectar con Mercado Pago")
+            messagebox.showerror("Error", f"No se pudo conectar con {pasarela}")
             return
 
         win = tk.Toplevel(self.root)
-        win.title("Mercado Pago QR")
-        win.geometry("400x550")
-        win.configure(bg=self.colors['mp_blue'])
+        win.title(f"Pago QR - {pasarela}")
+        win.geometry("450x650")
+        win.configure(bg=color_tema)
         win.grab_set()
 
-        tk.Label(win, text="ESCANEA EL QR", font=("Segoe UI", 16, "bold"), bg=self.colors['mp_blue'], fg="white").pack(pady=20)
+        tk.Label(win, text=f"ESCANEA EL QR ({pasarela})", font=("Segoe UI", 16, "bold"), bg=color_tema, fg="white").pack(pady=20)
 
         # Generar imagen QR
-        qr_img = qrcode.make(qr_data).resize((300, 300))
+        f_qr = tk.Frame(win, bg="white", padx=10, pady=10)
+        f_qr.pack(pady=10)
+        qr_img = qrcode.make(qr_data).resize((350, 350))
         self.img_qr_tk = ImageTk.PhotoImage(qr_img)
-        tk.Label(win, image=self.img_qr_tk, bg="white").pack(pady=10)
+        tk.Label(f_qr, image=self.img_qr_tk, bg="white").pack()
 
-        tk.Button(win, text="CONFIRMAR PAGO RECIBIDO", command=lambda: [win.destroy(), self.procesar_pago("QR")],
-                  bg=self.colors['success'], fg="white", font=("Segoe UI", 11, "bold"), pady=15).pack(fill=tk.X, padx=40, pady=25)
+        tk.Label(win, text=f"TOTAL: $ {float(self.total):.2f}", font=("Segoe UI", 20, "bold"), bg=color_tema, fg="white").pack(pady=15)
+
+        tk.Button(win, text="CONFIRMAR PAGO RECIBIDO", command=lambda: [win.destroy(), self.procesar_pago(f"QR_{pasarela}")],
+                  bg=self.colors['success'], fg="white", font=("Segoe UI", 12, "bold"), pady=15, relief="flat").pack(fill=tk.X, padx=40, pady=20)
 
     def procesar_pago(self, metodo):
         try:
@@ -300,7 +346,7 @@ class POSApp:
             cerrar_venta(self.venta_id, float(self.total), self.items.values())
             registrar_pago(self.venta_id, float(self.total), metodo, float(self.total + self.vuelto), float(self.vuelto))
             
-            # DB: Comprobante AFIP
+            # DB: Comprobante AFIP (Simulado)
             try:
                 conn = get_connection()
                 with conn.cursor() as cursor:
@@ -323,7 +369,7 @@ class POSApp:
             if hasattr(self, 'vuelto_label'):
                 self.vuelto_label.config(text=f"$ {float(self.vuelto):.2f}")
             
-            messagebox.showinfo("EXITO", f"Venta {self.venta_id} Finalizada")
+            messagebox.showinfo("EXITO", f"Venta {self.venta_id} Finalizada ({metodo})")
             self.nueva_venta()
         except Exception as e: 
             messagebox.showerror("Error", str(e))

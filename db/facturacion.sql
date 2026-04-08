@@ -139,7 +139,7 @@ CREATE TABLE `comprobante_afip` (
   `fecha_creacion` timestamp NULL DEFAULT current_timestamp(),
   `entorno` varchar(10) DEFAULT 'DEV',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -149,8 +149,39 @@ CREATE TABLE `comprobante_afip` (
 LOCK TABLES `comprobante_afip` WRITE;
 /*!40000 ALTER TABLE `comprobante_afip` DISABLE KEYS */;
 INSERT INTO `comprobante_afip` VALUES
-(1,122,11,1,222,'74123456789012','2026-12-31','APROBADO',NULL,'2026-04-08 19:36:46','DEV');
+(1,122,11,1,222,'74123456789012','2026-12-31','APROBADO',NULL,'2026-04-08 19:36:46','DEV'),
+(2,124,11,1,224,'74123456789012','2026-12-31','APROBADO',NULL,'2026-04-08 19:49:38','DEV');
 /*!40000 ALTER TABLE `comprobante_afip` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `config_pagos`
+--
+
+DROP TABLE IF EXISTS `config_pagos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config_pagos` (
+  `id` int(11) NOT NULL DEFAULT 1,
+  `mp_access_token` text DEFAULT NULL,
+  `mp_user_id` varchar(50) DEFAULT NULL,
+  `mp_external_id` varchar(50) DEFAULT 'CAJA_01',
+  `modo_sandbox` tinyint(4) DEFAULT 1,
+  `pw_api_key` text DEFAULT NULL,
+  `pw_merchant_id` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `config_pagos`
+--
+
+LOCK TABLES `config_pagos` WRITE;
+/*!40000 ALTER TABLE `config_pagos` DISABLE KEYS */;
+INSERT INTO `config_pagos` VALUES
+(1,'TEST-TOKEN-123','','CAJA_01',1,NULL,NULL);
+/*!40000 ALTER TABLE `config_pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -271,7 +302,7 @@ CREATE TABLE `pagos` (
   KEY `idx_pagos_fecha` (`fecha`),
   KEY `idx_pagos_estado` (`estado`),
   CONSTRAINT `pagos_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -316,7 +347,8 @@ INSERT INTO `pagos` VALUES
 (33,116,'TARJETA',4000.00,'2026-04-08 16:33:01',0.00,4000.00,'completado'),
 (34,118,'TARJETA',2000.00,'2026-04-08 16:33:37',0.00,2000.00,'completado'),
 (35,120,'TARJETA',2000.00,'2026-04-08 16:34:33',0.00,2000.00,'completado'),
-(36,122,'QR',2000.00,'2026-04-08 16:36:46',0.00,2000.00,'completado');
+(36,122,'QR',2000.00,'2026-04-08 16:36:46',0.00,2000.00,'completado'),
+(37,124,'QR',2000.00,'2026-04-08 16:49:38',0.00,2000.00,'completado');
 /*!40000 ALTER TABLE `pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -354,7 +386,7 @@ CREATE TABLE `productos` (
 LOCK TABLES `productos` WRITE;
 /*!40000 ALTER TABLE `productos` DISABLE KEYS */;
 INSERT INTO `productos` VALUES
-(1,'123','Coca-Cola','None',2000.00,39,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1),
+(1,'123','Coca-Cola','None',2000.00,38,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1),
 (2,'22222','juan','',1860.00,100,1,NULL,'2026-04-06 19:41:44',NULL,1000.00,1),
 (3,'62345','juanamnuel','',372.00,10,1,NULL,'2026-04-08 12:10:07',NULL,200.00,1);
 /*!40000 ALTER TABLE `productos` ENABLE KEYS */;
@@ -526,7 +558,7 @@ CREATE TABLE `venta_items` (
   KEY `producto_id` (`producto_id`),
   CONSTRAINT `venta_items_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   CONSTRAINT `venta_items_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=58 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -591,7 +623,8 @@ INSERT INTO `venta_items` VALUES
 (53,116,1,2,2000.00,4000.00,0.00),
 (54,118,1,1,2000.00,2000.00,0.00),
 (55,120,1,1,2000.00,2000.00,0.00),
-(56,122,1,1,2000.00,2000.00,0.00);
+(56,122,1,1,2000.00,2000.00,0.00),
+(57,124,1,1,2000.00,2000.00,0.00);
 /*!40000 ALTER TABLE `venta_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -614,7 +647,7 @@ CREATE TABLE `ventas` (
   PRIMARY KEY (`id`),
   KEY `cliente_id` (`cliente_id`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=124 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=130 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -746,7 +779,13 @@ INSERT INTO `ventas` VALUES
 (120,'2026-04-08 16:34:27',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL),
 (121,'2026-04-08 16:34:34',NULL,0.00,NULL,'COMPLETADA',0.00,NULL),
 (122,'2026-04-08 16:36:41',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL),
-(123,'2026-04-08 16:36:47',NULL,0.00,NULL,'COMPLETADA',0.00,NULL);
+(123,'2026-04-08 16:36:47',NULL,0.00,NULL,'COMPLETADA',0.00,NULL),
+(124,'2026-04-08 16:49:33',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL),
+(125,'2026-04-08 16:49:40',NULL,0.00,NULL,'COMPLETADA',0.00,NULL),
+(126,'2026-04-08 16:55:21',NULL,0.00,NULL,'COMPLETADA',0.00,NULL),
+(127,'2026-04-08 17:39:11',NULL,0.00,NULL,'COMPLETADA',0.00,NULL),
+(128,'2026-04-08 18:14:35',NULL,0.00,NULL,'COMPLETADA',0.00,NULL),
+(129,'2026-04-08 18:15:41',NULL,0.00,NULL,'COMPLETADA',0.00,NULL);
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -767,4 +806,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-08 16:46:44
+-- Dump completed on 2026-04-08 19:29:30

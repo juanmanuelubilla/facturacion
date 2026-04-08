@@ -7,7 +7,7 @@ class ConfigUI:
     def __init__(self, root, nombre_negocio_actual="SISTEMA"):
         self.root = root
         self.root.title(f"Ajustes del Sistema - {nombre_negocio_actual}")
-        self.root.geometry("600x700")
+        self.root.geometry("600x750")
         self.root.resizable(False, False)
         
         self.colors = {
@@ -15,6 +15,7 @@ class ConfigUI:
             'card': '#1e1e1e',
             'accent': '#9c27b0', 
             'mp_blue': '#009ee3',
+            'pw_red': '#ee2e24', # Color distintivo Payway
             'text': '#ffffff',
             'border': '#333333',
             'success': '#00db84'
@@ -28,10 +29,9 @@ class ConfigUI:
     def setup_styles(self):
         style = ttk.Style()
         style.theme_use('clam')
-        # Estilo de las pestañas
         style.configure("TNotebook", background=self.colors['bg'], borderwidth=0)
         style.configure("TNotebook.Tab", background=self.colors['card'], foreground="#888", 
-                        padding=[15, 5], font=('Segoe UI', 10))
+                        padding=[12, 5], font=('Segoe UI', 9, 'bold'))
         style.map("TNotebook.Tab", background=[("selected", self.colors['accent'])], 
                   foreground=[("selected", "white")])
 
@@ -42,20 +42,17 @@ class ConfigUI:
             self.ent_ruta.insert(0, directorio)
 
     def init_ui(self):
-        # Header Superior
         header = tk.Frame(self.root, bg=self.colors['bg'], pady=20)
         header.pack(fill=tk.X)
-        tk.Label(header, text="⚙️ CONFIGURACIÓN", font=('Segoe UI', 18, 'bold'), 
+        tk.Label(header, text="⚙️ CONFIGURACIÓN GLOBAL", font=('Segoe UI', 18, 'bold'), 
                  bg=self.colors['bg'], fg="white").pack()
 
-        # Contenedor de Pestañas
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 10))
 
         # --- PESTAÑA 1: NEGOCIO ---
         self.tab_negocio = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
-        self.notebook.add(self.tab_negocio, text="  🏬 Negocio  ")
-        
+        self.notebook.add(self.tab_negocio, text="  🏬 NEGOCIO  ")
         self.ent_nombre = self.crear_campo(self.tab_negocio, "Nombre Comercial:")
         self.ent_eslogan = self.crear_campo(self.tab_negocio, "Eslogan o Mensaje en Ticket:")
         self.ent_moneda = self.crear_campo(self.tab_negocio, "Símbolo de Moneda (ej: $):")
@@ -72,30 +69,31 @@ class ConfigUI:
 
         # --- PESTAÑA 2: FISCAL ---
         self.tab_fiscal = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
-        self.notebook.add(self.tab_fiscal, text="  📄 Datos Fiscales  ")
-        
+        self.notebook.add(self.tab_fiscal, text="  📄 FISCAL  ")
         self.ent_cuit = self.crear_campo(self.tab_fiscal, "CUIT / Identificación Tributaria:")
         self.ent_direccion = self.crear_campo(self.tab_fiscal, "Dirección Legal:")
         self.ent_iva_cond = self.crear_campo(self.tab_fiscal, "Condición frente al IVA:")
-        
         f_nums = tk.Frame(self.tab_fiscal, bg=self.colors['bg'])
         f_nums.pack(fill=tk.X, pady=20)
         self.ent_iva = self.crear_campo_pequeno(f_nums, "IVA General (%)", tk.LEFT)
         self.ent_ganancia = self.crear_campo_pequeno(f_nums, "Margen Sugerido (%)", tk.RIGHT)
 
-        # --- PESTAÑA 3: PAGOS (MP) ---
+        # --- PESTAÑA 3: MERCADO PAGO ---
         self.tab_mp = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
-        self.notebook.add(self.tab_mp, text="  💳 Mercado Pago  ")
-        
-        tk.Label(self.tab_mp, text="Configuración de Integración QR Dinámico", 
-                 font=('Segoe UI', 10, 'italic'), bg=self.colors['bg'], fg=self.colors['mp_blue']).pack(pady=(0, 20))
-        
-        self.ent_mp_token = self.crear_campo(self.tab_mp, "Access Token (Credenciales de Producción/Test):")
-        self.ent_mp_user = self.crear_campo(self.tab_mp, "Collector ID (User ID):")
-        self.ent_mp_caja = self.crear_campo(self.tab_mp, "External ID de la Caja (Pos ID):")
+        self.notebook.add(self.tab_mp, text="  💳 MERCADO PAGO  ")
+        tk.Label(self.tab_mp, text="Integración QR Dinámico (Instore)", font=('Segoe UI', 10, 'bold'), bg=self.colors['bg'], fg=self.colors['mp_blue']).pack(anchor="w")
+        self.ent_mp_token = self.crear_campo(self.tab_mp, "Access Token (Secret Key):")
+        self.ent_mp_user = self.crear_campo(self.tab_mp, "User ID (Collector ID):")
+        self.ent_mp_caja = self.crear_campo(self.tab_mp, "External ID de la Caja:")
 
-        # Botón Guardar (Fijo abajo)
-        btn_save = tk.Button(self.root, text="GUARDAR TODOS LOS CAMBIOS", font=('Segoe UI', 10, 'bold'), 
+        # --- PESTAÑA 4: PAYWAY ---
+        self.tab_pw = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
+        self.notebook.add(self.tab_pw, text="  💳 PAYWAY  ")
+        tk.Label(self.tab_pw, text="Integración QR Interoperable (Prisma)", font=('Segoe UI', 10, 'bold'), bg=self.colors['bg'], fg=self.colors['pw_red']).pack(anchor="w")
+        self.ent_pw_key = self.crear_campo(self.tab_pw, "API Key (Public Key):")
+        self.ent_pw_merchant = self.crear_campo(self.tab_pw, "Merchant ID:")
+
+        btn_save = tk.Button(self.root, text="GUARDAR CONFIGURACIÓN TOTAL", font=('Segoe UI', 10, 'bold'), 
                             bg=self.colors['success'], fg="#000", relief="flat", cursor="hand2",
                             command=self.guardar_todo, pady=12)
         btn_save.pack(fill=tk.X, padx=20, pady=20)
@@ -121,7 +119,6 @@ class ConfigUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                # Datos de negocio
                 cursor.execute("SELECT * FROM nombre_negocio WHERE id=1")
                 n = cursor.fetchone()
                 if n:
@@ -135,13 +132,14 @@ class ConfigUI:
                     self.ent_ganancia.insert(0, str(n.get('ganancia_sugerida') or "0.00"))
                     self.ent_ruta.insert(0, str(n.get('ruta_tickets') or ""))
 
-                # Datos de Mercado Pago
                 cursor.execute("SELECT * FROM config_pagos WHERE id=1")
                 mp = cursor.fetchone()
                 if mp:
                     self.ent_mp_token.insert(0, str(mp.get('mp_access_token') or ""))
                     self.ent_mp_user.insert(0, str(mp.get('mp_user_id') or ""))
                     self.ent_mp_caja.insert(0, str(mp.get('mp_external_id') or "CAJA_01"))
+                    self.ent_pw_key.insert(0, str(mp.get('pw_api_key') or ""))
+                    self.ent_pw_merchant.insert(0, str(mp.get('pw_merchant_id') or ""))
             conn.close()
         except Exception as e:
             print(f"Error carga: {e}")
@@ -150,7 +148,6 @@ class ConfigUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                # Update Negocio
                 cursor.execute("""UPDATE nombre_negocio SET 
                     nombre_negocio=%s, eslogan=%s, moneda=%s, cuit=%s, direccion=%s, 
                     condicion_iva=%s, impuesto=%s, ganancia_sugerida=%s, ruta_tickets=%s 
@@ -160,16 +157,15 @@ class ConfigUI:
                     float(self.ent_iva.get() or 0), float(self.ent_ganancia.get() or 0),
                     self.ent_ruta.get()
                 ))
-                # Update Mercado Pago
                 cursor.execute("""UPDATE config_pagos SET 
-                    mp_access_token=%s, mp_user_id=%s, mp_external_id=%s 
+                    mp_access_token=%s, mp_user_id=%s, mp_external_id=%s,
+                    pw_api_key=%s, pw_merchant_id=%s
                     WHERE id=1""", (
-                    self.ent_mp_token.get().strip(),
-                    self.ent_mp_user.get().strip(),
-                    self.ent_mp_caja.get().strip()
+                    self.ent_mp_token.get().strip(), self.ent_mp_user.get().strip(), self.ent_mp_caja.get().strip(),
+                    self.ent_pw_key.get().strip(), self.ent_pw_merchant.get().strip()
                 ))
                 conn.commit()
-            messagebox.showinfo("Éxito", "Configuración actualizada globalmente.")
+            messagebox.showinfo("Éxito", "Todos los cambios fueron guardados.")
             self.root.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo guardar: {e}")
