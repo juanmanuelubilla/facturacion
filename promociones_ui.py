@@ -11,9 +11,10 @@ from db import get_connection
 from productos import obtener_productos 
 
 class PromocionesGUI:
-    def __init__(self, root, nombre_negocio="NEXUS", usuario_id=1):
+    def __init__(self, root, nombre_negocio="NEXUS", empresa_id=1, usuario_id=1):
         self.root = root
-        self.usuario_id = usuario_id
+        self.empresa_id = int(empresa_id) # <--- Inyectado para multiempresa
+        self.usuario_id = int(usuario_id)
         self.root.title(f"{nombre_negocio.upper()} - Centro de Promociones")
         self.root.geometry("1400x850")
         
@@ -52,7 +53,6 @@ class PromocionesGUI:
                         background="#252525", foreground="white", relief="flat")
 
     def obtener_imagen_desde_ruta(self, ruta):
-        """Toma la ruta de la DB y crea el icono 24x24"""
         if not ruta or not os.path.exists(ruta):
             return None
         try:
@@ -113,7 +113,8 @@ class PromocionesGUI:
         if "OK: " in entry.get(): return 
         listbox.delete(0, tk.END)
         if len(q) < 2: return
-        for p in obtener_productos():
+        # Filtramos productos por la empresa actual
+        for p in obtener_productos(self.empresa_id):
             if q in p['nombre'].lower() or q in str(p['codigo']).lower():
                 listbox.insert(tk.END, f"{p['id']} | {p['nombre']}")
 
@@ -121,25 +122,27 @@ class PromocionesGUI:
         tk.Label(self.tab_qr, text="NUEVO CUPÓN", font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['success']).pack(pady=15)
         self.ent_codigo = self.crear_input(self.tab_qr, "CÓDIGO")
         self.ent_porcentaje_qr = self.crear_input(self.tab_qr, "DESCUENTO (%)", True)
-        tk.Button(self.tab_qr, text="GUARDAR QR", bg=self.colors['success'], command=self.guardar_cupon).pack(fill=tk.X, pady=15)
+        tk.Button(self.tab_qr, text="GUARDAR Y GENERAR QR", bg=self.colors['success'], command=self.guardar_cupon, font=('Segoe UI', 10, 'bold')).pack(fill=tk.X, pady=15)
         self.qr_label = tk.Label(self.tab_qr, bg="#252525", width=180, height=180); self.qr_label.pack()
 
     def setup_tab_combo(self):
         tk.Label(self.tab_combo, text="COMBO DE PRODUCTOS", font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['accent']).pack(pady=15)
         self.ent_nombre_combo = self.crear_input(self.tab_combo, "NOMBRE COMBO")
+        tk.Label(self.tab_combo, text="BUSCAR PRODUCTO", font=('Segoe UI', 8), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(anchor="w")
         self.search_combo = tk.Entry(self.tab_combo, bg="#252525", fg="white", borderwidth=0); self.search_combo.pack(fill=tk.X, ipady=5); self.search_combo.bind("<KeyRelease>", lambda e: self.actualizar_sugerencias(self.search_combo, self.list_sug_combo))
         self.list_sug_combo = tk.Listbox(self.tab_combo, bg="#252525", fg="white", height=4); self.list_sug_combo.pack(fill=tk.X); self.list_sug_combo.bind("<Double-Button-1>", self.seleccionar_para_combo)
         self.list_actual_combo = tk.Listbox(self.tab_combo, bg="#1a1a1a", fg=self.colors['success'], height=4); self.list_actual_combo.pack(fill=tk.X, pady=5)
         self.ent_porcentaje_combo = self.crear_input(self.tab_combo, "DESCUENTO (%)", True)
-        tk.Button(self.tab_combo, text="CREAR COMBO", bg=self.colors['accent'], command=self.guardar_combo).pack(fill=tk.X, pady=15)
+        tk.Button(self.tab_combo, text="CREAR COMBO", bg=self.colors['accent'], command=self.guardar_combo, font=('Segoe UI', 10, 'bold')).pack(fill=tk.X, pady=15)
 
     def setup_tab_volumen(self):
         tk.Label(self.tab_vol, text="PRECIO POR CANTIDAD", font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['volumen']).pack(pady=15)
+        tk.Label(self.tab_vol, text="BUSCAR PRODUCTO", font=('Segoe UI', 8), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(anchor="w")
         self.search_vol = tk.Entry(self.tab_vol, bg="#252525", fg="white", borderwidth=0); self.search_vol.pack(fill=tk.X, ipady=5); self.search_vol.bind("<KeyRelease>", lambda e: self.actualizar_sugerencias(self.search_vol, self.list_sug_vol))
         self.list_sug_vol = tk.Listbox(self.tab_vol, bg="#252525", fg="white", height=4); self.list_sug_vol.pack(fill=tk.X); self.list_sug_vol.bind("<Double-Button-1>", self.seleccionar_para_volumen)
         self.ent_cant_min = self.crear_input(self.tab_vol, "CANTIDAD MÍNIMA", True)
         self.ent_porcentaje_vol = self.crear_input(self.tab_vol, "DESCUENTO (%)", True)
-        tk.Button(self.tab_vol, text="CREAR REGLA MAYORISTA", bg=self.colors['volumen'], fg="white", command=self.guardar_volumen).pack(fill=tk.X, pady=20)
+        tk.Button(self.tab_vol, text="CREAR REGLA MAYORISTA", bg=self.colors['volumen'], fg="white", command=self.guardar_volumen, font=('Segoe UI', 10, 'bold')).pack(fill=tk.X, pady=20)
 
     def seleccionar_para_combo(self, event=None):
         idx = self.list_sug_combo.curselection()
@@ -162,7 +165,10 @@ class PromocionesGUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                cursor.execute("INSERT INTO promociones_volumen (producto_id, cantidad_minima, descuento_porcentaje, activo) VALUES (%s, %s, %s, 1)", (int(self.prod_vol_id), int(c), float(p)))
+                cursor.execute("""
+                    INSERT INTO promociones_volumen (producto_id, empresa_id, cantidad_minima, descuento_porcentaje, activo) 
+                    VALUES (%s, %s, %s, %s, 1)
+                """, (int(self.prod_vol_id), self.empresa_id, int(c), float(p)))
             conn.commit(); conn.close(); messagebox.showinfo("Éxito", "Regla guardada."); self.cargar_promociones()
         except Exception as e: messagebox.showerror("Error", str(e))
 
@@ -172,7 +178,10 @@ class PromocionesGUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                cursor.execute("INSERT INTO cupones (codigo_qr, descuento_porcentaje, activo) VALUES (%s, %s, 1)", (c, float(p)))
+                cursor.execute("""
+                    INSERT INTO cupones (codigo_qr, empresa_id, descuento_porcentaje, activo) 
+                    VALUES (%s, %s, %s, 1)
+                """, (c, self.empresa_id, float(p)))
             conn.commit(); conn.close(); self.generar_qr_visual(c); self.cargar_promociones()
         except Exception as e: messagebox.showerror("Error", str(e))
 
@@ -182,7 +191,10 @@ class PromocionesGUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                cursor.execute("INSERT INTO promociones_combos (nombre_promo, productos_ids, descuento_porcentaje, activo) VALUES (%s, %s, %s, 1)", (n, ",".join(self.productos_combo), float(p)))
+                cursor.execute("""
+                    INSERT INTO promociones_combos (nombre_promo, empresa_id, productos_ids, descuento_porcentaje, activo) 
+                    VALUES (%s, %s, %s, %s, 1)
+                """, (n, self.empresa_id, ",".join(self.productos_combo), float(p)))
             conn.commit(); conn.close(); self.productos_combo = []; self.list_actual_combo.delete(0, tk.END); self.cargar_promociones()
         except Exception as e: messagebox.showerror("Error", str(e))
 
@@ -197,21 +209,23 @@ class PromocionesGUI:
         conn = get_connection()
         try:
             with conn.cursor() as cursor:
-                # Cupones
-                cursor.execute("SELECT id, codigo_qr, descuento_porcentaje FROM cupones WHERE activo=1")
-                for r in cursor.fetchall(): self.tabla.insert("", tk.END, text="", values=(r['id'], "CUPÓN", r['codigo_qr'], f"{r['descuento_porcentaje']}%", "ACTIVO"))
+                # Cupones de esta empresa
+                cursor.execute("SELECT id, codigo_qr, descuento_porcentaje FROM cupones WHERE activo=1 AND empresa_id=%s", (self.empresa_id,))
+                for r in cursor.fetchall(): 
+                    self.tabla.insert("", tk.END, text="", values=(r['id'], "CUPÓN", r['codigo_qr'], f"{r['descuento_porcentaje']}%", "ACTIVO"))
                 
-                # Combos
-                cursor.execute("SELECT id, nombre_promo, descuento_porcentaje FROM promociones_combos WHERE activo=1")
-                for r in cursor.fetchall(): self.tabla.insert("", tk.END, text="", values=(r['id'], "COMBO", r['nombre_promo'], f"{r['descuento_porcentaje']}%", "ACTIVO"))
+                # Combos de esta empresa
+                cursor.execute("SELECT id, nombre_promo, descuento_porcentaje FROM promociones_combos WHERE activo=1 AND empresa_id=%s", (self.empresa_id,))
+                for r in cursor.fetchall(): 
+                    self.tabla.insert("", tk.END, text="", values=(r['id'], "COMBO", r['nombre_promo'], f"{r['descuento_porcentaje']}%", "ACTIVO"))
                 
-                # Mayorista (JOIN con 'imagen' según tu productos.py)
+                # Mayorista de esta empresa
                 cursor.execute("""
                     SELECT v.id, p.nombre, p.imagen, v.cantidad_minima, v.descuento_porcentaje 
                     FROM promociones_volumen v 
                     JOIN productos p ON v.producto_id = p.id
-                    WHERE v.activo = 1
-                """)
+                    WHERE v.activo = 1 AND v.empresa_id = %s
+                """, (self.empresa_id,))
                 for r in cursor.fetchall():
                     foto = self.obtener_imagen_desde_ruta(r['imagen'])
                     self.tabla.insert("", tk.END, image=foto if foto else "", values=(r['id'], "MAYORISTA", f"{r['nombre']} (x{r['cantidad_minima']})", f"{r['descuento_porcentaje']}%", "ACTIVO"))
@@ -220,6 +234,11 @@ class PromocionesGUI:
         finally: conn.close()
 
 if __name__ == "__main__":
+    # Soporta el paso de argumentos desde el main.py
+    negocio = sys.argv[1] if len(sys.argv) > 1 else "NEXUS"
+    emp_id = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+    usu_id = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+    
     root = tk.Tk()
-    app = PromocionesGUI(root, sys.argv[1] if len(sys.argv)>1 else "NEXUS")
+    app = PromocionesGUI(root, negocio, emp_id, usu_id)
     root.mainloop()
