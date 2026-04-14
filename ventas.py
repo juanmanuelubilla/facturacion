@@ -1,14 +1,10 @@
 from db import get_connection
 from productos import descontar_stock
 
-# =========================
-# CREAR VENTA
-# =========================
-def crear_venta(empresa_id, usuario_id=1):
+def crear_venta(empresa_id, usuario_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # La venta nace vinculada a la empresa y al usuario que la opera
             cursor.execute("""
                 INSERT INTO ventas (total, ganancia, usuario_id, empresa_id, fecha) 
                 VALUES (0, 0, %s, %s, NOW())
@@ -19,9 +15,6 @@ def crear_venta(empresa_id, usuario_id=1):
     finally:
         conn.close()
 
-# =========================
-# AGREGAR ITEM (FUNCIÓN RESTAURADA)
-# =========================
 def agregar_item(venta_id, item, cantidad):
     conn = get_connection()
     try:
@@ -39,9 +32,6 @@ def agregar_item(venta_id, item, cantidad):
     finally:
         conn.close()
 
-# =========================
-# CERRAR VENTA
-# =========================
 def cerrar_venta(venta_id, total, items, empresa_id):
     conn = get_connection()
     try:
@@ -65,9 +55,6 @@ def cerrar_venta(venta_id, total, items, empresa_id):
     finally:
         conn.close()
 
-# =========================
-# REGISTRAR PAGO
-# =========================
 def registrar_pago(venta_id, monto, metodo_pago, entregado, vuelto, empresa_id):
     conn = get_connection()
     try:

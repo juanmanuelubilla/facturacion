@@ -249,6 +249,41 @@ INSERT INTO `empresas` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `finanzas`
+--
+
+DROP TABLE IF EXISTS `finanzas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `finanzas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) DEFAULT NULL,
+  `tipo` enum('INGRESO','GASTO') NOT NULL,
+  `categoria` varchar(50) DEFAULT NULL,
+  `monto` decimal(10,2) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `metodo_pago` enum('EFECTIVO','TRANSFERENCIA','TARJETA') DEFAULT 'EFECTIVO',
+  `fecha` date DEFAULT curdate(),
+  `hora` time DEFAULT curtime(),
+  `usuario_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `empresa_id` (`empresa_id`),
+  CONSTRAINT `finanzas_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `finanzas`
+--
+
+LOCK TABLES `finanzas` WRITE;
+/*!40000 ALTER TABLE `finanzas` DISABLE KEYS */;
+INSERT INTO `finanzas` VALUES
+(1,1,'INGRESO','Ventas',174.00,'Venta POS #149','EFECTIVO','2026-04-13','20:50:06',1);
+/*!40000 ALTER TABLE `finanzas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `movimientos_caja`
 --
 
@@ -257,14 +292,16 @@ DROP TABLE IF EXISTS `movimientos_caja`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `movimientos_caja` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `caja_id` int(11) DEFAULT NULL,
-  `tipo` varchar(20) DEFAULT NULL,
-  `descripcion` varchar(255) DEFAULT NULL,
+  `empresa_id` int(11) DEFAULT NULL,
+  `tipo` enum('INGRESO','GASTO') DEFAULT NULL,
+  `categoria` varchar(50) DEFAULT NULL,
   `monto` decimal(10,2) DEFAULT NULL,
-  `fecha` datetime DEFAULT current_timestamp(),
+  `descripcion` text DEFAULT NULL,
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  `usuario_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `caja_id` (`caja_id`),
-  CONSTRAINT `movimientos_caja_ibfk_1` FOREIGN KEY (`caja_id`) REFERENCES `caja` (`id`)
+  KEY `empresa_id` (`empresa_id`),
+  CONSTRAINT `movimientos_caja_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -335,7 +372,7 @@ CREATE TABLE `pagos` (
   KEY `idx_pagos_fecha` (`fecha`),
   KEY `idx_pagos_estado` (`estado`),
   CONSTRAINT `pagos_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -381,7 +418,8 @@ INSERT INTO `pagos` VALUES
 (34,118,'TARJETA',2000.00,'2026-04-08 16:33:37',0.00,2000.00,'completado',1),
 (35,120,'TARJETA',2000.00,'2026-04-08 16:34:33',0.00,2000.00,'completado',1),
 (36,122,'QR',2000.00,'2026-04-08 16:36:46',0.00,2000.00,'completado',1),
-(37,124,'QR',2000.00,'2026-04-08 16:49:38',0.00,2000.00,'completado',1);
+(37,124,'QR',2000.00,'2026-04-08 16:49:38',0.00,2000.00,'completado',1),
+(38,149,'EFECTIVO',174.00,'2026-04-13 20:50:06',9826.00,10000.00,'completado',1);
 /*!40000 ALTER TABLE `pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -410,7 +448,7 @@ CREATE TABLE `productos` (
   UNIQUE KEY `codigo` (`codigo`),
   KEY `categoria_id` (`categoria_id`),
   CONSTRAINT `productos_ibfk_1` FOREIGN KEY (`categoria_id`) REFERENCES `categorias` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -420,10 +458,11 @@ CREATE TABLE `productos` (
 LOCK TABLES `productos` WRITE;
 /*!40000 ALTER TABLE `productos` DISABLE KEYS */;
 INSERT INTO `productos` VALUES
-(1,'123','Coca-Cola','None',2000.00,38,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1,0),
-(2,'22222','juan','',1860.00,100,1,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,0),
-(3,'62345','juanamnuel','',372.00,10,1,NULL,'2026-04-08 12:10:07',NULL,200.00,1,0),
-(4,'2542312','axelito','',174.00,5,1,NULL,'2026-04-08 21:41:21',NULL,100.00,1,0);
+(1,'123','Coca-Cola','None',2000.00,38,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1,1),
+(2,'22222','juan','',1860.00,100,1,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,1),
+(3,'62345','juanamnuel','',372.00,10,1,NULL,'2026-04-08 12:10:07',NULL,200.00,1,1),
+(4,'2542312','axelito','',174.00,5,1,NULL,'2026-04-08 21:41:21',NULL,100.00,1,1),
+(6,'12334','juan','',174.00,9,1,NULL,'2026-04-13 18:22:52',NULL,100.00,1,1);
 /*!40000 ALTER TABLE `productos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -597,7 +636,7 @@ CREATE TABLE `venta_items` (
   KEY `producto_id` (`producto_id`),
   CONSTRAINT `venta_items_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   CONSTRAINT `venta_items_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -664,7 +703,14 @@ INSERT INTO `venta_items` VALUES
 (55,120,1,1,2000.00,2000.00,0.00),
 (56,122,1,1,2000.00,2000.00,0.00),
 (57,124,1,1,2000.00,2000.00,0.00),
-(58,132,1,1,2000.00,2000.00,0.00);
+(58,132,1,1,2000.00,2000.00,0.00),
+(59,147,6,1,174.00,174.00,0.00),
+(60,147,6,1,174.00,174.00,0.00),
+(61,147,6,1,174.00,174.00,0.00),
+(62,147,6,1,174.00,174.00,0.00),
+(63,148,6,1,174.00,174.00,0.00),
+(64,148,6,1,174.00,174.00,0.00),
+(65,149,6,1,174.00,174.00,100.00);
 /*!40000 ALTER TABLE `venta_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -688,7 +734,7 @@ CREATE TABLE `ventas` (
   PRIMARY KEY (`id`),
   KEY `cliente_id` (`cliente_id`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=157 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -834,7 +880,26 @@ INSERT INTO `ventas` VALUES
 (134,'2026-04-08 20:53:26',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
 (135,'2026-04-08 20:53:35',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
 (136,'2026-04-08 21:02:02',NULL,0.00,NULL,'COMPLETADA',0.00,1,0),
-(137,'2026-04-08 21:37:46',NULL,0.00,NULL,'COMPLETADA',0.00,1,0);
+(137,'2026-04-08 21:37:46',NULL,0.00,NULL,'COMPLETADA',0.00,1,0),
+(138,'2026-04-09 15:58:50',NULL,0.00,NULL,'COMPLETADA',0.00,1,0),
+(139,'2026-04-13 18:10:43',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(140,'2026-04-13 18:10:56',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(141,'2026-04-13 18:15:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(142,'2026-04-13 18:18:26',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(143,'2026-04-13 18:18:53',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(144,'2026-04-13 18:18:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(145,'2026-04-13 18:22:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(146,'2026-04-13 18:22:58',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(147,'2026-04-13 18:29:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(148,'2026-04-13 20:32:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(149,'2026-04-13 20:49:41',NULL,174.00,NULL,'COMPLETADA',74.00,1,1),
+(150,'2026-04-13 20:50:11',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(151,'2026-04-13 20:50:42',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(152,'2026-04-13 20:57:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(153,'2026-04-13 21:05:53',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(154,'2026-04-13 21:09:16',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(155,'2026-04-13 21:10:03',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
+(156,'2026-04-13 21:33:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1);
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -855,4 +920,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-09  9:29:34
+-- Dump completed on 2026-04-13 21:36:13

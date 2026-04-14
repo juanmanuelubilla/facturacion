@@ -42,12 +42,15 @@ def buscar_productos_por_nombre(nombre, empresa_id):
     finally:
         conn.close()
 
-def descontar_stock(producto_id, cantidad):
-    """ Esta es la que te faltaba y causaba el ImportError """
+def descontar_stock(producto_id, cantidad, empresa_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("UPDATE productos SET stock = stock - %s WHERE id = %s", (cantidad, producto_id))
+            cursor.execute("""
+                UPDATE productos 
+                SET stock = stock - %s 
+                WHERE id = %s AND empresa_id = %s
+            """, (cantidad, producto_id, empresa_id))
             conn.commit()
     finally:
         conn.close()
@@ -68,11 +71,36 @@ def validar_cupon(codigo_qr, empresa_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
+            # Buscamos el cupón escaneado (QR) que esté activo para esta empresa
             sql = """SELECT * FROM cupones 
-                     WHERE codigo_qr = %s AND activo = 1 AND empresa_id = %s
-                     AND (fecha_expiracion IS NULL OR fecha_expiracion >= CURDATE())
-                     AND usos_actuales < usos_maximos"""
+                     WHERE codigo_qr = %s AND activo = 1 AND empresa_id = %s"""
             cursor.execute(sql, (codigo_qr, empresa_id))
             return cursor.fetchone()
+    finally:
+        conn.close()
+
+def obtener_regla_mayorista(producto_id, empresa_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT cantidad_minima, descuento_porcentaje 
+                FROM promociones_volumen 
+                WHERE producto_id = %s AND empresa_id = %s AND activo = 1
+            """, (producto_id, empresa_id))
+            return cursor.fetchone()
+    finally:
+        conn.close()
+
+def obtener_combos_activos(empresa_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT productos_ids, descuento_porcentaje 
+                FROM promociones_combos 
+                WHERE empresa_id = %s AND activo = 1
+            """, (empresa_id,))
+            return cursor.fetchall()
     finally:
         conn.close()
