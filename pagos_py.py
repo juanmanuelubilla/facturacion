@@ -1,5 +1,5 @@
 import mercadopago
-import requests # Payway suele usarse con requests directamente
+import requests
 from db import get_connection
 
 def obtener_config_pagos():
@@ -7,14 +7,14 @@ def obtener_config_pagos():
     try:
         conn = get_connection()
         with conn.cursor() as cursor:
-            # Asumimos que agregaste campos de Payway a tu tabla config_pagos
+            # Seleccionamos la configuración de la empresa
             cursor.execute("SELECT * FROM config_pagos WHERE id=1")
             return cursor.fetchone()
     except Exception as e:
         print(f"Error DB: {e}")
         return None
     finally:
-        if 'conn' in locals(): conn.close()
+        if 'conn' in locals() and conn: conn.close()
 
 # --- LÓGICA MERCADO PAGO ---
 def generar_qr_mercadopago(venta_id, total):
@@ -36,20 +36,14 @@ def generar_qr_mercadopago(venta_id, total):
 # --- LÓGICA PAYWAY (PRISMA) ---
 def generar_qr_payway(venta_id, total):
     config = obtener_config_pagos()
-    # Payway requiere API Key y usualmente un Merchant ID
     api_key = config.get('pw_api_key') 
-    merchant_id = config.get('pw_merchant_id')
-
     if not api_key: return None
 
-    # Payway (Prisma) usa un endpoint REST para generar el QR Interoperable
-    url = "https://api.payway.com.ar/checkout/v1/qr/generar" # Ejemplo de URL
-    
+    url = "https://api.payway.com.ar/checkout/v1/qr/generar" 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
     payload = {
         "amount": float(total),
         "external_id": str(venta_id),
@@ -58,11 +52,36 @@ def generar_qr_payway(venta_id, total):
     }
 
     try:
-        # Nota: Esto es un esquema base, Payway requiere certificación previa
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code == 200:
-            return response.json().get("qr_string") # El texto para el QR
+            return response.json().get("qr_string") 
         return None
     except Exception as e:
         print(f"Error Payway: {e}")
+        return None
+
+# --- LÓGICA MODO ---
+def generar_qr_modo(venta_id, total):
+    config = obtener_config_pagos()
+    api_key = config.get('modo_api_key') # Campo esperado en tu DB
+    if not api_key: return None
+
+    url = "https://api.modo.com.ar/checkout/v1/qr" 
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "amount": float(total),
+        "externalId": str(venta_id),
+        "callbackUrl": "https://tudominio.com/modo_webhook"
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("qrData")
+        return None
+    except Exception as e:
+        print(f"Error MODO: {e}")
         return None

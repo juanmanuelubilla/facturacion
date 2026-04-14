@@ -4,6 +4,7 @@ from decimal import Decimal
 from PIL import Image, ImageTk
 import os
 import sys
+import qrcode  # Asegúrate de tener: pip install qrcode
 
 # Importaciones de lógica
 from productos import (obtener_productos, buscar_producto_por_codigo, 
@@ -12,6 +13,9 @@ from productos import (obtener_productos, buscar_producto_por_codigo,
 from ventas import crear_venta, agregar_item, cerrar_venta, registrar_pago
 from ticket import generar_ticket, guardar_ticket 
 from db import get_connection
+
+# IMPORTACIÓN DE PAGOS QR
+from pagos_py import generar_qr_mercadopago, generar_qr_payway, generar_qr_modo
 
 def beep():
     print("\a", end="", flush=True)
@@ -41,7 +45,7 @@ class POSApp:
         self.orden = [] 
         self.total = Decimal('0')
         self.vuelto = Decimal('0')
-        self.descuento_cupon_actual = Decimal('0') # Para el QR de F5
+        self.descuento_cupon_actual = Decimal('0')
         
         self.setup_styles()
         self.create_widgets(nombre_negocio)
@@ -100,7 +104,6 @@ class POSApp:
         content = tk.Frame(main_container, bg=self.colors['bg_main'])
         content.pack(fill=tk.BOTH, expand=True)
         
-        # Tabla Stock
         cat_frame = tk.Frame(content, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1)
         cat_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
         self.tabla = ttk.Treeview(cat_frame, columns=("SKU", "Nombre", "Precio", "Stock"), show="tree headings", style="Custom.Treeview")
@@ -111,7 +114,6 @@ class POSApp:
         self.tabla.heading("Stock", text="STOCK"); self.tabla.column("Stock", width=80)
         self.tabla.pack(fill=tk.BOTH, expand=True)
 
-        # Tabla Carrito
         car_frame = tk.Frame(content, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1)
         car_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
         self.carrito = ttk.Treeview(car_frame, columns=("Prod", "Cant", "Precio", "Sub"), show="tree headings", style="Custom.Treeview")
@@ -141,6 +143,62 @@ class POSApp:
     def crear_boton(self, master, texto, color, comando):
         tk.Button(master, text=texto, bg=color, fg="white", font=('Segoe UI', 9, 'bold'), relief="flat", padx=15, pady=10, command=comando, cursor="hand2").pack(side=tk.LEFT, padx=3)
 
+    # --- LOGICA DE COBRO Y QR ---
+    def mostrar_dialogo_pago(self):
+        dialog = tk.Toplevel(self.root); dialog.geometry("400x650"); dialog.configure(bg=self.colors['bg_panel'])
+        tk.Label(dialog, text="FORMA DE PAGO", font=('Segoe UI', 14, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=20)
+        btn_opts = {"font": ('Segoe UI', 11, 'bold'), "width": 25, "pady": 10, "fg": "white"}
+        
+        tk.Button(dialog, text="EFECTIVO", command=lambda: [dialog.destroy(), self.mostrar_dialogo_efectivo()], bg=self.colors['success'], **btn_opts).pack(pady=5)
+        tk.Button(dialog, text="TARJETA", command=lambda: [dialog.destroy(), self.procesar_pago("TARJETA")], bg=self.colors['accent'], **btn_opts).pack(pady=5)
+        tk.Button(dialog, text="QR MERCADO PAGO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MP")], bg="#009ee3", **btn_opts).pack(pady=5)
+        tk.Button(dialog, text="QR PAYWAY", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("PW")], bg="#ee3d2f", **btn_opts).pack(pady=5)
+        tk.Button(dialog, text="QR MODO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MODO")], bg="#5cb85c", **btn_opts).pack(pady=5)
+        tk.Button(dialog, text="TRANSFERENCIA", command=lambda: [dialog.destroy(), self.procesar_pago("TRANSFERENCIA")], bg="#6c5ce7", **btn_opts).pack(pady=5)
+
+    def mostrar_qr_pago(self, tipo):
+        if not self.items: return
+        # Creamos una venta temporal para el external_reference
+        temp_v_id = crear_venta(self.empresa_id, self.usuario_id)
+        
+        qr_string = ""
+        if tipo == "MP":
+            qr_string = generar_qr_mercadopago(temp_v_id, self.total)
+        elif tipo == "PW":
+            qr_string = generar_qr_payway(temp_v_id, self.total)
+        elif tipo == "MODO":
+            qr_string = generar_qr_modo(temp_v_id, self.total)
+
+        if not qr_string:
+            messagebox.showerror("Error", f"No se pudo conectar con la pasarela de pago {tipo}.")
+            return
+
+        qr_win = tk.Toplevel(self.root); qr_win.geometry("400x520"); qr_win.title(f"Pagar con QR - {tipo}")
+        qr_win.configure(bg="white")
+        
+        tk.Label(qr_win, text=f"ESCANEA PARA PAGAR $ {float(self.total):.2f}", font=("Arial", 12, "bold"), bg="white").pack(pady=10)
+        
+        # Generar imagen QR
+        qr_img = qrcode.make(qr_string).resize((300, 300))
+        qr_photo = ImageTk.PhotoImage(qr_img)
+        lbl_img = tk.Label(qr_win, image=qr_photo, bg="white")
+        lbl_img.image = qr_photo
+        lbl_img.pack(pady=10)
+
+        tk.Button(qr_win, text="CONFIRMAR PAGO REALIZADO", bg=self.colors['success'], fg="white", 
+                  command=lambda: [qr_win.destroy(), self.finalizar_venta_qr(temp_v_id, tipo)]).pack(pady=20)
+
+    def finalizar_venta_qr(self, v_id, tipo):
+        # Como el v_id ya fue creado al generar el QR, solo agregamos items y cerramos
+        for it in self.items.values(): agregar_item(v_id, it, it["cantidad"])
+        cerrar_venta(v_id, float(self.total), self.items.values(), self.empresa_id)
+        registrar_pago(v_id, float(self.total), f"QR_{tipo}", float(self.total), 0, self.empresa_id)
+        
+        messagebox.showinfo("Venta", f"Pago por QR {tipo} registrado.")
+        self.nueva_venta()
+        self.cargar_productos_stock()
+
+    # --- RESTO DE FUNCIONES (STOCK, PRODUCTOS, DESCUENTOS) ---
     def cargar_productos_stock(self):
         for item in self.tabla.get_children(): self.tabla.delete(item)
         prods = obtener_productos(self.empresa_id)
@@ -154,84 +212,49 @@ class POSApp:
             res = buscar_productos_por_nombre(texto, self.empresa_id)
             if not res: beep(); self.input_codigo.delete(0, tk.END); return
             producto = res[0]
-        
-        sku = producto["codigo"]
-        precio_base = Decimal(str(producto["precio"]))
-        
-        if sku in self.items:
-            self.items[sku]["cantidad"] += 1
+        sku = producto["codigo"]; precio_base = Decimal(str(producto["precio"]))
+        if sku in self.items: self.items[sku]["cantidad"] += 1
         else:
-            self.items[sku] = {
-                "id": producto["id"], "nombre": producto["nombre"], "cantidad": 1, 
-                "precio_original": precio_base, "precio": precio_base, "subtotal": precio_base, 
-                "imagen": producto.get("imagen")
-            }
-        
-        self.orden.append(sku)
-        self.recalcular_precios()
-        beep()
-        self.input_codigo.delete(0, tk.END)
+            self.items[sku] = {"id": producto["id"], "nombre": producto["nombre"], "cantidad": 1, 
+                               "precio_original": precio_base, "precio": precio_base, "subtotal": precio_base, 
+                               "imagen": producto.get("imagen")}
+        self.orden.append(sku); self.recalcular_precios(); beep(); self.input_codigo.delete(0, tk.END)
 
     def recalcular_precios(self):
-        """ Lógica Central: Mayorista -> Combos -> Cupón QR """
         self.total = Decimal('0')
-        
-        # 1. Aplicar reglas de mayorista por cada producto
         for sku, item in self.items.items():
             regla = obtener_regla_mayorista(item["id"], self.empresa_id)
             p_final = item["precio_original"]
-            
             if regla and item["cantidad"] >= regla["cantidad_minima"]:
-                desc = Decimal(str(regla["descuento_porcentaje"])) / 100
-                p_final = item["precio_original"] * (1 - desc)
-            
-            item["precio"] = p_final
-            item["subtotal"] = item["precio"] * item["cantidad"]
-            self.total += item["subtotal"]
+                p_final = item["precio_original"] * (1 - Decimal(str(regla["descuento_porcentaje"])) / 100)
+            item["precio"] = p_final; item["subtotal"] = item["precio"] * item["cantidad"]; self.total += item["subtotal"]
 
-        # 2. Aplicar Combos (si están presentes todos los componentes)
         combos = obtener_combos_activos(self.empresa_id)
         for c in combos:
             ids_necesarios = [int(x) for x in c['productos_ids'].split(',')]
             ids_carrito = [i['id'] for i in self.items.values()]
-            
             if all(pid in ids_carrito for pid in ids_necesarios):
-                factor_desc = Decimal(str(c['descuento_porcentaje'])) / 100
+                factor = Decimal(str(c['descuento_porcentaje'])) / 100
                 for pid in ids_necesarios:
                     for i in self.items.values():
-                        if i['id'] == pid:
-                            self.total -= (i['subtotal'] * factor_desc)
+                        if i['id'] == pid: self.total -= (i['subtotal'] * factor)
 
-        # 3. Aplicar descuento de Cupón QR manual
-        if self.descuento_cupon_actual > 0:
-            self.total -= (self.total * self.descuento_cupon_actual / 100)
-
+        if self.descuento_cupon_actual > 0: self.total -= (self.total * self.descuento_cupon_actual / 100)
         self.actualizar_carrito_ui()
 
     def abrir_lector_qr(self):
-        """ Diálogo para escanear un cupón QR o promoción manual """
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Escanear Cupón QR"); dialog.geometry("400x200")
-        dialog.configure(bg=self.colors['bg_panel'])
-        dialog.transient(self.root); dialog.grab_set()
-
+        dialog = tk.Toplevel(self.root); dialog.title("Escanear Cupón QR"); dialog.geometry("400x200")
+        dialog.configure(bg=self.colors['bg_panel']); dialog.transient(self.root); dialog.grab_set()
         tk.Label(dialog, text="ESCANEE EL CÓDIGO QR", font=('Segoe UI', 12, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=20)
         entry_qr = tk.Entry(dialog, font=('Segoe UI', 16), justify='center'); entry_qr.pack(pady=10); entry_qr.focus()
-
         def validar():
-            codigo = entry_qr.get().strip().upper()
-            cupon = validar_cupon(codigo, self.empresa_id)
+            cupon = validar_cupon(entry_qr.get().strip().upper(), self.empresa_id)
             if cupon:
                 self.descuento_cupon_actual = Decimal(str(cupon['descuento_porcentaje']))
-                self.recalcular_precios()
-                beep(); dialog.destroy()
+                self.recalcular_precios(); beep(); dialog.destroy()
                 messagebox.showinfo("Promoción", f"¡Cupón de {cupon['descuento_porcentaje']}% aplicado!")
-            else:
-                messagebox.showerror("Error", "Cupón inválido o no existe.")
-                entry_qr.delete(0, tk.END)
-
+            else: messagebox.showerror("Error", "Cupón inválido."); entry_qr.delete(0, tk.END)
         entry_qr.bind('<Return>', lambda e: validar())
-        tk.Button(dialog, text="APLICAR", bg=self.colors['success'], command=validar).pack(pady=10)
 
     def borrar_item(self):
         if not self.orden: return
@@ -243,8 +266,7 @@ class POSApp:
 
     def limpiar_carrito(self):
         if self.items and messagebox.askyesno("Vaciar", "¿Desea limpiar el carrito?"):
-            self.items = {}; self.orden = []; self.descuento_cupon_actual = Decimal('0')
-            self.recalcular_precios()
+            self.items = {}; self.orden = []; self.descuento_cupon_actual = Decimal('0'); self.recalcular_precios()
 
     def actualizar_carrito_ui(self):
         for item in self.carrito.get_children(): self.carrito.delete(item)
@@ -271,23 +293,16 @@ class POSApp:
             for it in self.items.values(): agregar_item(v_id, it, it["cantidad"])
             cerrar_venta(v_id, float(self.total), self.items.values(), self.empresa_id)
             registrar_pago(v_id, float(self.total), metodo, float(self.total + self.vuelto), float(self.vuelto), self.empresa_id)
-            
-            # Registrar Finanzas
             conn = get_connection()
             with conn.cursor() as cursor:
                 cursor.execute("INSERT INTO finanzas (empresa_id, tipo, categoria, monto, descripcion, metodo_pago, usuario_id) VALUES (%s, 'INGRESO', 'Ventas', %s, %s, %s, %s)",
                                (self.empresa_id, float(self.total), f"Venta POS #{v_id}", metodo, self.usuario_id))
             conn.commit()
-            
-            # Ticket
             txt = generar_ticket(conn, list(self.items.values()), float(self.total), v_id, metodo, float(self.vuelto), self.empresa_id)
-            guardar_ticket(conn, txt, v_id)
-            conn.close()
-
+            guardar_ticket(conn, txt, v_id); conn.close()
             self.vuelto_label.config(text=f"$ {float(self.vuelto):.2f}")
             messagebox.showinfo("Venta", f"Completada con éxito. Venta #{v_id}")
-            self.nueva_venta()
-            self.cargar_productos_stock()
+            self.nueva_venta(); self.cargar_productos_stock()
         except Exception as e: messagebox.showerror("Error", str(e))
 
     def nueva_venta(self):
@@ -300,14 +315,6 @@ class POSApp:
 
     def key_f2(self):
         if self.items: self.mostrar_dialogo_pago()
-
-    def mostrar_dialogo_pago(self):
-        dialog = tk.Toplevel(self.root); dialog.geometry("400x450"); dialog.configure(bg=self.colors['bg_panel'])
-        tk.Label(dialog, text="FORMA DE PAGO", font=('Segoe UI', 14, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=20)
-        btn_opts = {"font": ('Segoe UI', 11, 'bold'), "width": 25, "pady": 10, "fg": "white"}
-        tk.Button(dialog, text="EFECTIVO", command=lambda: [dialog.destroy(), self.mostrar_dialogo_efectivo()], bg=self.colors['success'], **btn_opts).pack(pady=5)
-        tk.Button(dialog, text="TARJETA", command=lambda: [dialog.destroy(), self.procesar_pago("TARJETA")], bg=self.colors['accent'], **btn_opts).pack(pady=5)
-        tk.Button(dialog, text="TRANSFERENCIA", command=lambda: [dialog.destroy(), self.procesar_pago("TRANSFERENCIA")], bg="#6c5ce7", **btn_opts).pack(pady=5)
 
     def mostrar_dialogo_efectivo(self):
         dialog = tk.Toplevel(self.root); dialog.geometry("350x250"); dialog.configure(bg=self.colors['bg_panel'])
