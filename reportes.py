@@ -5,163 +5,197 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import pandas as pd
 import sys
 import warnings
+from datetime import datetime, timedelta
 from db import get_connection
 
-# Ignorar advertencias de pandas sobre la conexión
 warnings.filterwarnings("ignore", category=UserWarning)
 
 class ReportesGUI:
     def __init__(self, root, nombre_negocio="NEXUS", empresa_id=1):
         self.root = root
+        
         try:
-            # Si el ID es 0, lo tratamos como 1 pero la query buscará ambos
-            self.empresa_id = int(empresa_id) if int(empresa_id) != 0 else 1
+            self.empresa_id = int(str(empresa_id).strip())
+            if self.empresa_id == 0:
+                self.empresa_id = 1
         except:
             self.empresa_id = 1
-            
-        self.root.title(f"{nombre_negocio} - REPORTES Y ESTADÍSTICAS")
-        self.root.geometry("1200x800")
+
+        print(f"DEBUG REPORTES → Empresa ID: {self.empresa_id}")
+
+        self.filtro_actual = "MES"
+        self.root.title(f"{nombre_negocio} - REPORTES PRO")
+        self.root.geometry("1300x850")
         self.root.configure(bg='#121212')
-        
+
         self.colors = {
-            'bg': '#121212', 
-            'card': '#1e1e1e', 
-            'ingreso': '#00db84', 
+            'bg': '#121212',
+            'card': '#1e1e1e',
+            'ingreso': '#00db84',
             'gasto': '#ff4757',
             'texto': '#ffffff',
             'accent': '#00a8ff'
         }
-        
+
         self.crear_widgets()
         self.cargar_graficos()
 
     def crear_widgets(self):
-        # Header
-        header = tk.Frame(self.root, bg=self.colors['bg'], pady=20)
+        header = tk.Frame(self.root, bg=self.colors['bg'], pady=10)
         header.pack(fill=tk.X, padx=20)
-        
-        tk.Label(header, text="📈 PANEL DE RENDIMIENTO FINANCIERO", 
-                 font=('Segoe UI', 18, 'bold'), bg=self.colors['bg'], fg="white").pack(side=tk.LEFT)
-        
-        tk.Button(header, text="CERRAR", bg="#333", fg="white", font=('Segoe UI', 10, 'bold'),
-                  relief="flat", command=self.root.destroy, padx=20, cursor="hand2").pack(side=tk.RIGHT)
 
-        # Contenedor Principal
+        tk.Label(header, text="📊 DASHBOARD FINANCIERO",
+                 font=('Segoe UI', 18, 'bold'),
+                 bg=self.colors['bg'], fg="white").pack(side=tk.LEFT)
+
+        filtros = tk.Frame(header, bg=self.colors['bg'])
+        filtros.pack(side=tk.RIGHT)
+
+        for f in ["HOY", "SEMANA", "MES", "TODO"]:
+            tk.Button(
+                filtros, text=f,
+                command=lambda x=f: self.cambiar_filtro(x),
+                bg="#333", fg="white", relief="flat", padx=10, cursor="hand2"
+            ).pack(side=tk.LEFT, padx=3)
+
         self.main_container = tk.Frame(self.root, bg=self.colors['bg'])
         self.main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
-        # Panel Lateral para métricas
-        self.side_panel = tk.Frame(self.main_container, bg=self.colors['card'], width=280, padx=20, pady=20)
-        self.side_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 15))
+        self.side_panel = tk.Frame(self.main_container, bg=self.colors['card'], width=300)
+        self.side_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         self.side_panel.pack_propagate(False)
 
-        # Área del Gráfico
-        self.graph_frame = tk.Frame(self.main_container, bg=self.colors['card'], highlightthickness=1, highlightbackground="#333")
+        self.graph_frame = tk.Frame(self.main_container, bg=self.colors['card'])
         self.graph_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+    def get_fecha_desde(self):
+        hoy = datetime.now()
+        if self.filtro_actual == "HOY":
+            fecha = hoy.replace(hour=0, minute=0, second=0)
+        elif self.filtro_actual == "SEMANA":
+            fecha = hoy - timedelta(days=7)
+        elif self.filtro_actual == "MES":
+            fecha = hoy - timedelta(days=30)
+        else:
+            return None
+        return fecha.strftime('%Y-%m-%d %H:%M:%S')
+
+    def cambiar_filtro(self, filtro):
+        self.filtro_actual = filtro
+        self.cargar_graficos()
 
     def obtener_datos(self):
         try:
             conn = get_connection()
-            # Ajuste de query: Filtramos por empresa_id %s O empresa_id 0 (para tus datos actuales)
-            query = """
-                SELECT dia, SUM(ingresos) as ingresos, SUM(gastos) as gastos
-                FROM (
-                    -- Ventas de productos (buscamos ID enviado e ID 0 por compatibilidad)
-                    SELECT DATE(fecha) as dia, SUM(total) as ingresos, 0 as gastos
-                    FROM ventas 
-                    WHERE (empresa_id = %s OR empresa_id = 0) AND estado = 'COMPLETADA'
-                    GROUP BY dia
-                    
-                    UNION ALL
-                    
-                    -- Otros ingresos manuales (Finanzas)
-                    SELECT fecha as dia, SUM(monto) as ingresos, 0 as gastos
-                    FROM finanzas 
-                    WHERE (empresa_id = %s OR empresa_id = 0) AND tipo = 'INGRESO' AND categoria != 'Ventas'
-                    GROUP BY dia
-                    
-                    UNION ALL
-                    
-                    -- Gastos registrados (Finanzas)
-                    SELECT fecha as dia, 0 as ingresos, SUM(monto) as gastos
-                    FROM finanzas 
-                    WHERE (empresa_id = %s OR empresa_id = 0) AND tipo = 'GASTO'
-                    GROUP BY dia
-                ) AS m
-                GROUP BY dia 
-                ORDER BY dia ASC
+            fecha_desde = self.get_fecha_desde()
+            where_fecha = "AND fecha >= %s" if fecha_desde else ""
+            
+            params = [self.empresa_id]
+            if fecha_desde: params.append(fecha_desde)
+
+            query = f"""
+                SELECT DATE(fecha) as dia, SUM(total) as ingresos
+                FROM ventas
+                WHERE empresa_id=%s AND estado='COMPLETADA' {where_fecha}
+                GROUP BY DATE(fecha) ORDER BY dia
             """
-            df = pd.read_sql(query, conn, params=(self.empresa_id, self.empresa_id, self.empresa_id))
+
+            # Leemos los datos
+            df = pd.read_sql(query, conn, params=params)
             conn.close()
 
-            if not df.empty:
-                df['ingresos'] = pd.to_numeric(df['ingresos'], errors='coerce').fillna(0.0)
-                df['gastos'] = pd.to_numeric(df['gastos'], errors='coerce').fillna(0.0)
-                df['dia'] = pd.to_datetime(df['dia']).dt.strftime('%d/%m')
+            if df.empty:
+                return pd.DataFrame()
+
+            # 🔥 FIX CRÍTICO: Eliminar filas que accidentalmente repitan los nombres de las columnas
+            df = df[df['dia'] != 'dia'] 
+
+            # Convertir a tipos correctos con manejo de errores
+            df['ingresos'] = pd.to_numeric(df['ingresos'], errors='coerce').fillna(0)
             
+            # Formatear la fecha para el gráfico (Día/Mes)
+            df['dia'] = pd.to_datetime(df['dia'], errors='coerce').dt.strftime('%d/%m')
+            
+            # Eliminar posibles nulos después de la conversión
+            df = df.dropna(subset=['dia'])
+
             return df
+
         except Exception as e:
-            print(f"Error en extracción de reportes: {e}")
+            print("ERROR SQL EN REPORTE:", e)
+            return pd.DataFrame()
+
+    def top_productos(self):
+        try:
+            conn = get_connection()
+            query = """
+                SELECT i.nombre, SUM(i.cantidad) as total
+                FROM venta_items i
+                JOIN ventas v ON i.venta_id = v.id
+                WHERE v.empresa_id=%s
+                GROUP BY i.nombre ORDER BY total DESC LIMIT 5
+            """
+            df = pd.read_sql(query, conn, params=(self.empresa_id,))
+            conn.close()
+            return df[df['nombre'] != 'nombre'] # Fix preventivo
+        except:
+            return pd.DataFrame()
+
+    def ventas_por_usuario(self):
+        try:
+            conn = get_connection()
+            query = """
+                SELECT u.nombre, COUNT(v.id) as total
+                FROM ventas v
+                JOIN usuarios u ON v.usuario_id = u.id
+                WHERE v.empresa_id=%s
+                GROUP BY u.nombre
+            """
+            df = pd.read_sql(query, conn, params=(self.empresa_id,))
+            conn.close()
+            return df[df['nombre'] != 'nombre'] # Fix preventivo
+        except:
             return pd.DataFrame()
 
     def cargar_graficos(self):
-        for widget in self.graph_frame.winfo_children():
-            widget.destroy()
+        for w in self.graph_frame.winfo_children(): w.destroy()
+        for w in self.side_panel.winfo_children(): w.destroy()
 
         df = self.obtener_datos()
-        
-        if df.empty or (df['ingresos'].sum() == 0 and df['gastos'].sum() == 0):
-            lbl = tk.Label(self.graph_frame, text="Sin datos suficientes para generar gráficos.\nRevise que las ventas estén 'COMPLETADAS'.", 
-                           bg=self.colors['card'], fg="#666", font=('Segoe UI', 12))
-            lbl.pack(expand=True)
+
+        if df.empty:
+            tk.Label(self.graph_frame, text=f"SIN DATOS REGISTRADOS",
+                     bg=self.colors['card'], fg="gray", font=('Segoe UI', 12)).pack(expand=True)
             return
 
-        plt.rcParams.update({'text.color': 'white', 'axes.labelcolor': 'white'})
-        fig, ax = plt.subplots(figsize=(10, 6), facecolor=self.colors['card'])
+        fig, ax = plt.subplots(figsize=(9, 5), facecolor=self.colors['card'])
         ax.set_facecolor(self.colors['card'])
-        
-        # Gráfico de barras para ingresos
-        ax.bar(df['dia'], df['ingresos'], color=self.colors['ingreso'], label='Ingresos ($)', alpha=0.6, width=0.5)
-        
-        # Gráfico de línea para gastos
-        ax.plot(df['dia'], df['gastos'], color=self.colors['gasto'], label='Gastos ($)', 
-                marker='o', linewidth=3, markersize=8, markerfacecolor='white')
-        
-        ax.set_title("Evolución de Caja", fontsize=14, pad=20, color='white', fontweight='bold')
-        ax.tick_params(colors='white', labelsize=9)
-        ax.grid(axis='y', linestyle='--', alpha=0.1, color='white')
-        
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-        
-        ax.legend(facecolor='#333', labelcolor='white', edgecolor='none', loc='upper left')
-        plt.tight_layout()
+
+        ax.bar(df['dia'], df['ingresos'], color=self.colors['ingreso'], alpha=0.6, label="Ingresos")
+        ax.plot(df['dia'], df['ingresos'], marker='o', color='white')
+
+        ax.set_title("Ventas por día", color='white')
+        ax.tick_params(colors='white')
+        ax.legend()
 
         canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        # Cálculo de métricas para el panel lateral
-        total_in = float(df['ingresos'].sum())
-        total_out = float(df['gastos'].sum())
-        balance = total_in - total_out
-        
-        tk.Label(self.side_panel, text="RESUMEN TOTAL", font=('Segoe UI', 10, 'bold'), 
-                 bg=self.colors['card'], fg=self.colors['accent']).pack(anchor="w", pady=(0, 20))
+        self.metric("TOTAL VENTAS", df['ingresos'].sum(), self.colors['ingreso'])
 
-        self.crear_metrica("INGRESOS", f"$ {total_in:,.2f}", self.colors['ingreso'])
-        self.crear_metrica("GASTOS", f"$ {total_out:,.2f}", self.colors['gasto'])
-        
-        tk.Frame(self.side_panel, height=1, bg="#333").pack(fill=tk.X, pady=20)
-        
-        color_bal = self.colors['ingreso'] if balance >= 0 else self.colors['gasto']
-        self.crear_metrica("BALANCE NETO", f"$ {balance:,.2f}", color_bal)
+        # Paneles laterales
+        tk.Label(self.side_panel, text="\nTOP PRODUCTOS", fg="white", bg=self.colors['card'], font=('Segoe UI', 10, 'bold')).pack()
+        for _, r in self.top_productos().iterrows():
+            tk.Label(self.side_panel, text=f"{r['nombre']} ({r['total']})", bg=self.colors['card'], fg="#aaa").pack(anchor="w", padx=10)
 
-    def crear_metrica(self, titulo, valor, color):
-        frame = tk.Frame(self.side_panel, bg=self.colors['card'], pady=12)
-        frame.pack(fill=tk.X)
-        tk.Label(frame, text=titulo, bg=self.colors['card'], fg="#888", font=('Segoe UI', 8, 'bold')).pack(anchor="w")
-        tk.Label(frame, text=valor, bg=self.colors['card'], fg=color, font=('Consolas', 16, 'bold')).pack(anchor="w")
+        tk.Label(self.side_panel, text="\nVENTAS POR USUARIO", fg="white", bg=self.colors['card'], font=('Segoe UI', 10, 'bold')).pack()
+        for _, r in self.ventas_por_usuario().iterrows():
+            tk.Label(self.side_panel, text=f"{r['nombre']} ({r['total']})", bg=self.colors['card'], fg="#aaa").pack(anchor="w", padx=10)
+
+    def metric(self, titulo, valor, color):
+        tk.Label(self.side_panel, text=titulo, bg=self.colors['card'], fg="#888", font=('Segoe UI', 9)).pack(anchor="w", padx=10)
+        tk.Label(self.side_panel, text=f"$ {valor:,.2f}", bg=self.colors['card'], fg=color, font=('Consolas', 14, 'bold')).pack(anchor="w", padx=10, pady=(0,10))
 
 if __name__ == "__main__":
     root = tk.Tk()

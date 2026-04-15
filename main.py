@@ -12,7 +12,7 @@ class NexusLauncher:
         # Permite maximizar y redimensionar la ventana
         self.root.resizable(True, True)
         
-        # PALETA DE COLORES DIVERSIFICADA (Única por módulo para evitar confusión)
+        # PALETA DE COLORES
         self.colors = {
             'bg': '#121212', 
             'card': '#1e1e1e', 
@@ -20,17 +20,14 @@ class NexusLauncher:
             'text_dim': '#888888', 
             'border': '#333333',
             'login_accent': '#00a8ff',
-            
-            # Colores asignados a cada módulo
-            'empresas': '#2ecc71',   # Verde Esmeralda
-            'users': '#e67e22',      # Naranja
-            'settings': '#9c27b0',   # Morado
-            'inventario': '#3498db', # Azul
-            'finanzas': '#6c5ce7',   # Violeta
-            'clientes': '#1abc9c',   # Turquesa
-            'reportes': '#f39c12',   # Oro
-            'promo': '#e84393',      # Fucsia
-            'ventas': '#00db84'      # Verde Lima
+            'empresas': '#2ecc71',
+            'users': '#e67e22',
+            'settings': '#9c27b0',
+            'inventario': '#3498db',
+            'finanzas': '#6c5ce7',
+            'clientes': '#1abc9c',
+            'promo': '#e84393',
+            'ventas': '#00db84'
         }
         
         self.root.configure(bg=self.colors['bg'])
@@ -38,7 +35,6 @@ class NexusLauncher:
         self.empresa_seleccionada_id = None 
         self.config = {'nombre': 'NEXUS POS'}
         
-        # Iniciar con la pantalla de Login
         self.mostrar_login()
         self.centrar_ventana(400, 620)
 
@@ -125,7 +121,6 @@ class NexusLauncher:
                         self.usuario_actual = {'id': res[0], 'nombre': res[1], 'rol': res[2], 'empresa_id': res[3]}
                     
                     self.config = self.obtener_config_db(self.empresa_seleccionada_id)
-                    # Actualizar título con el nombre real del local
                     self.root.title(f"NEXUS POS - {self.config['nombre'].upper()}")
                     self.abrir_dashboard()
                 else: 
@@ -168,16 +163,15 @@ class NexusLauncher:
 
         # --- FILA 2: ADMINISTRACIÓN (JEFE / ADMIN) ---
         if rol in ['jefe', 'admin']:
-            tk.Label(container, text="── ADMINISTRACIÓN DE NEGOCIO ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['reportes']).pack(pady=(0, 5))
+            tk.Label(container, text="── ADMINISTRACIÓN DE NEGOCIO ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['inventario']).pack(pady=(0, 5))
             r2 = tk.Frame(container, bg=self.colors['bg'])
             r2.pack(pady=(0, 25))
             self.crear_modulo(r2, "INVENTARIO", "Stock.", self.colors['inventario'], "gestion_ui.py", "📦", args)
             self.crear_modulo(r2, "FINANZAS", "Caja.", self.colors['finanzas'], "finanzas.py", "💰", args)
             self.crear_modulo(r2, "CLIENTES", "Agenda.", self.colors['clientes'], "clientes_ui.py", "👤", args)
-            self.crear_modulo(r2, "REPORTES", "Gráficos.", self.colors['reportes'], "reportes.py", "📈", args)
             self.crear_modulo(r2, "PROMOS", "Cupones.", self.colors['promo'], "promociones_ui.py", "🎟️", args)
 
-        # --- FILA 3: OPERACIONES DIARIAS (TODOS LOS ROLES) ---
+        # --- FILA 3: OPERACIONES DIARIAS ---
         tk.Label(container, text="── OPERACIONES DIARIAS ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['ventas']).pack(pady=(0, 5))
         r3 = tk.Frame(container, bg=self.colors['bg'])
         r3.pack(pady=(0, 20))
@@ -201,7 +195,7 @@ class NexusLauncher:
         if os.path.exists(archivo):
             self.root.withdraw()
             try:
-                cmd = ["python3", archivo, self.config.get('nombre', 'NEXUS')]
+                cmd = [sys.executable, archivo, self.config.get('nombre', 'NEXUS')]
                 if extra_arg: cmd.extend(extra_arg.split())
                 subprocess.run(cmd)
             except Exception as e: 
@@ -214,7 +208,6 @@ class NexusLauncher:
             messagebox.showerror("Error", f"Falta el archivo: {archivo}")
 
     def run(self):
-        # Este es el método que faltaba y causaba el error
         self.root.mainloop()
 
 if __name__ == "__main__":
