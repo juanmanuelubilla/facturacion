@@ -2,9 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from db import get_connection
 
-# Nota: Importar la clase del nuevo archivo si decides separarlos
-# from reportes import ReportesGUI 
-
 class FinanzasGUI:
     def __init__(self, root, nombre_negocio="NEXUS", empresa_id=1, usuario_id=1):
         self.root = root
@@ -16,11 +13,9 @@ class FinanzasGUI:
         
         self.colors = {
             'bg': '#121212', 'card': '#1e1e1e', 'accent': '#00a8ff',
-            'ingreso': '#00db84', 'gasto': '#ff4757', 'text': '#ffffff',
-            'btn_reports': '#6c5ce7'
+            'ingreso': '#00db84', 'gasto': '#ff4757', 'text': '#ffffff'
         }
         
-        # Categorías Extendidas Mergeadas
         self.categorias_por_tipo = {
             "INGRESO": [
                 "Ventas POS", "Aporte de Capital", "Devolución Proveedor", 
@@ -40,17 +35,12 @@ class FinanzasGUI:
         self.actualizar_reporte()
 
     def crear_widgets(self):
-        # --- HEADER ---
+        # --- HEADER (Sin botón de reportes) ---
         header = tk.Frame(self.root, bg=self.colors['bg'], pady=20)
         header.pack(fill=tk.X, padx=20)
         
         tk.Label(header, text="📊 BALANCE Y RENTABILIDAD REAL", font=('Segoe UI', 16, 'bold'), 
                  bg=self.colors['bg'], fg="white").pack(side=tk.LEFT)
-        
-        # Botón para abrir Gráficos
-        tk.Button(header, text="📈 VER REPORTES Y GRÁFICOS", bg=self.colors['btn_reports'], 
-                  fg="white", font=('Segoe UI', 10, 'bold'), relief="flat", padx=15,
-                  command=self.abrir_reportes, cursor="hand2").pack(side=tk.RIGHT)
         
         # --- PANEL DE RESUMEN ---
         self.resumen_frame = tk.Frame(self.root, bg=self.colors['bg'])
@@ -141,7 +131,6 @@ class FinanzasGUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                # 1. Movimientos Manuales del día
                 cursor.execute("""
                     SELECT tipo, categoria, monto, descripcion, DATE_FORMAT(hora, '%%H:%%i') as hora_f 
                     FROM finanzas 
@@ -158,10 +147,6 @@ class FinanzasGUI:
                         total_gastos += monto
                     self.tabla.insert("", tk.END, values=(m['tipo'], m['categoria'], f"${monto:.2f}", m['descripcion'], m['hora_f']))
 
-                # 2. Datos consolidados de Ventas (Aquí corregimos el cálculo)
-                # Seleccionamos SUM(total) para el bruto y restamos el costo para la utilidad real
-                # Asumimos que la tabla 'ventas' tiene columna 'total' y la tabla 'detalles_ventas' tiene los costos
-                # O mejor aún, si tu tabla 'ventas' ya tiene 'ganancia' calculada (Precio - Costo)
                 cursor.execute("""
                     SELECT 
                         IFNULL(SUM(total), 0) as ventas_brutas, 
@@ -174,11 +159,9 @@ class FinanzasGUI:
                 ventas_bruto = float(res_ventas['ventas_brutas'])
                 utilidad_de_ventas = float(res_ventas['utilidad_ventas'])
 
-                # Actualizamos Cards
                 self.card_ventas.config(text=f"${ventas_bruto:.2f}")
                 self.card_gastos.config(text=f"${total_gastos:.2f}")
                 
-                # La Utilidad Real es: (Lo que gané vendiendo + otros ingresos) - Gastos Operativos
                 utilidad_real = utilidad_de_ventas + total_ingresos_extra - total_gastos
                 self.card_utilidad.config(text=f"${utilidad_real:.2f}")
                 
@@ -186,10 +169,8 @@ class FinanzasGUI:
         except Exception as e: 
             print(f"Error reporte: {e}")
 
-    def abrir_reportes(self):
-        messagebox.showinfo("Reportes", "Módulo de Reportes Históricos (Matplotlib) inicializado.")
-
 if __name__ == "__main__":
     root = tk.Tk()
-    app = FinanzasGUI(root, "BOTILLERIA TEST", 1, 1)
+    # Para probar directamente:
+    app = FinanzasGUI(root, "NEXUS POS", 1, 1)
     root.mainloop()
