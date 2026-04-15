@@ -117,15 +117,19 @@ class NexusLauncher:
         rol = self.usuario_actual['rol'].lower()
         nombre_u = self.usuario_actual['nombre'].upper()
         id_u = self.usuario_actual['id']
+        
         header = tk.Frame(self.root, bg=self.colors['bg'], pady=30)
         header.pack(fill=tk.X)
+        
         tk.Label(header, text=self.config['nombre'].upper(), font=('Segoe UI', 28, 'bold'), bg=self.colors['bg'], fg=self.colors['accent']).pack()
         info = f"USUARIO: {nombre_u}  |  LOCAL ID: {self.empresa_seleccionada_id}  |  RANGO: {rol.upper()}"
         tk.Label(header, text=info, font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg=self.colors['success']).pack(pady=5)
+        
         container = tk.Frame(self.root, bg=self.colors['bg'])
         container.pack(expand=True)
         args_comunes = f"{self.empresa_seleccionada_id} {id_u}"
 
+        # --- SECCIÓN ADMIN ---
         if rol == 'admin':
             tk.Label(container, text="── GESTIÓN GLOBAL DEL SISTEMA ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['settings']).pack(pady=(10, 5))
             row_admin = tk.Frame(container, bg=self.colors['bg'])
@@ -133,15 +137,21 @@ class NexusLauncher:
             self.crear_modulo(row_admin, "EMPRESAS", "Locales.", self.colors['settings'], "gestor_empresas_ui.py", "🏢", extra_arg=args_comunes)
             self.crear_modulo(row_admin, "PERSONAL", "Usuarios.", self.colors['users'], "usuarios_ui.py", "👥", extra_arg=args_comunes)
 
+        # --- SECCIÓN ADMINISTRACIÓN DE NEGOCIO ---
         if rol in ['jefe', 'admin']:
             tk.Label(container, text="── ADMINISTRACIÓN DE NEGOCIO ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['reportes']).pack(pady=(0, 5))
             row_jefe = tk.Frame(container, bg=self.colors['bg'])
             row_jefe.pack(pady=(0, 25))
             self.crear_modulo(row_jefe, "INVENTARIO", "Stock.", self.colors['accent'], "gestion_ui.py", "📦", extra_arg=args_comunes)
             self.crear_modulo(row_jefe, "FINANZAS", "Caja.", self.colors['finanzas'], "finanzas.py", "💰", extra_arg=args_comunes)
+            
+            # Módulo de Clientes Integrado
+            self.crear_modulo(row_jefe, "CLIENTES", "Agenda/IVA.", self.colors['success'], "clientes_ui.py", "👤", extra_arg=args_comunes)
+            
             self.crear_modulo(row_jefe, "REPORTES", "Gráficos.", self.colors['reportes'], "reportes.py", "📈", extra_arg=args_comunes)
             self.crear_modulo(row_jefe, "CONFIGURAR", "Ajustes/Pagos.", self.colors['settings'], "config_ui.py", "⚙️", extra_arg=args_comunes)
 
+        # --- SECCIÓN OPERACIONES DIARIAS ---
         tk.Label(container, text="── OPERACIONES DIARIAS ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['success']).pack(pady=(0, 5))
         row_operativo = tk.Frame(container, bg=self.colors['bg'])
         row_operativo.pack(pady=(0, 20))
@@ -151,17 +161,18 @@ class NexusLauncher:
         tk.Button(self.root, text="⬅ CERRAR SESIÓN", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg="#666", relief="flat", command=self.mostrar_login, cursor="hand2").place(x=20, y=20)
 
     def crear_modulo(self, master, titulo, desc, color, script, icono, extra_arg=None):
-        card = tk.Frame(master, bg=self.colors['card'], padx=20, pady=25, highlightthickness=1, highlightbackground=self.colors['border'])
-        card.pack(side=tk.LEFT, padx=12)
+        card = tk.Frame(master, bg=self.colors['card'], padx=15, pady=25, highlightthickness=1, highlightbackground=self.colors['border'])
+        card.pack(side=tk.LEFT, padx=8)
         tk.Label(card, text=icono, font=('Segoe UI', 32), bg=self.colors['card'], fg=color).pack(pady=(0, 10))
-        tk.Label(card, text=titulo, font=('Segoe UI', 13, 'bold'), bg=self.colors['card'], fg="white").pack()
-        tk.Label(card, text=desc, font=('Segoe UI', 8), bg=self.colors['card'], fg=self.colors['text_dim'], wraplength=130).pack(pady=10)
-        tk.Button(card, text="INGRESAR", font=('Segoe UI', 8, 'bold'), bg=color, fg="white", relief="flat", padx=25, pady=10, command=lambda: self.lanzar_script(script, extra_arg)).pack()
+        tk.Label(card, text=titulo, font=('Segoe UI', 12, 'bold'), bg=self.colors['card'], fg="white").pack()
+        tk.Label(card, text=desc, font=('Segoe UI', 8), bg=self.colors['card'], fg=self.colors['text_dim'], wraplength=110).pack(pady=10)
+        tk.Button(card, text="INGRESAR", font=('Segoe UI', 8, 'bold'), bg=color, fg="white", relief="flat", padx=20, pady=8, command=lambda: self.lanzar_script(script, extra_arg)).pack()
 
     def lanzar_script(self, archivo, extra_arg=None):
         if os.path.exists(archivo):
             self.root.withdraw()
             try:
+                # El comando pasa: [0]script, [1]nombre_negocio, [2]empresa_id, [3]usuario_id
                 cmd = ["python3", archivo, self.config.get('nombre', 'NEXUS')]
                 if extra_arg: cmd.extend(extra_arg.split())
                 subprocess.run(cmd)

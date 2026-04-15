@@ -1,0 +1,24 @@
+========================================
+           BOTILLERIA CURICO            
+             PUNTO DE VENTA             
+           INDEPENDENCIA 3100           
+CUIT:               20-258472811              
+IVA:               No Inscripto              
+========================================
+            TIQUET NO FISCAL            
+P.V.: 00001 - Nro: 00000181
+Fecha: 14/04/2026 22:52
+----------------------------------------
+CLIENTE: JUAN MANUEL UBILLA
+DOC/CUIT: 20-25847281-1
+IVA: Responsable Inscripto
+----------------------------------------
+CANT  DETALLE                       SUBT
+3     Coca-Cola                 $6000.00
+----------------------------------------
+TOTAL:          $                6000.00
+PAGO:                          EFECTIVO
+========================================
+
+         GRACIAS POR SU COMPRA          
+========================================

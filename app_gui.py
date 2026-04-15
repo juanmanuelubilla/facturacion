@@ -25,19 +25,22 @@ class POSApp:
         self.root = root
         self.empresa_id = int(empresa_id)
         self.usuario_id = int(usuario_id)
-        self.nombre_negocio = nombre_negocio 
+        
+        # 1. CARGAR CONFIGURACIÓN REAL DEL NEGOCIO DESDE DB
+        self.config_negocio = self.cargar_datos_negocio()
+        self.nombre_negocio = self.config_negocio.get('nombre_negocio', nombre_negocio).upper()
+        
+        # DATOS DE CLIENTE (Por defecto Consumidor Final)
+        self.cliente_actual = {"id": 0, "nombre": "CONSUMIDOR FINAL"}
         
         user_data = self.obtener_datos_usuario(self.usuario_id)
         self.usuario_nombre = user_data['nombre']
         self.usuario_rol = user_data['rol']
         
-        # Cargar configuración de fraccionamiento al inicio
         self.permite_fraccion_global = self.cargar_permiso_fraccion()
-        
-        # Cargar configuración de pasarelas para validación de botones
         self.config_pagos = self.cargar_config_pagos()
         
-        self.root.title(f"{nombre_negocio.upper()} - Terminal POS")
+        self.root.title(f"{self.nombre_negocio} - Terminal POS")
         self.root.geometry("1450x900")
         
         self.colors = {
@@ -54,11 +57,77 @@ class POSApp:
         self.descuento_cupon_actual = Decimal('0')
         
         self.setup_styles()
-        self.create_widgets(nombre_negocio)
+        self.create_widgets()
         self.nueva_venta()                  
         self.cargar_productos_stock() 
         self.setup_keyboard_bindings()
         self.input_codigo.focus()
+
+    def cargar_datos_negocio(self):
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM nombre_negocio WHERE empresa_id=%s OR id=1 LIMIT 1", (self.empresa_id,))
+                res = cursor.fetchone()
+                return res if res else {}
+        except: return {}
+        finally:
+            if 'conn' in locals() and conn: conn.close()
+
+    def abrir_selector_cliente(self):
+        dialog = tk.Toplevel(self.root)
+        dialog.title("BUSCAR CLIENTE")
+        dialog.geometry("500x450")
+        dialog.configure(bg=self.colors['bg_panel'])
+        dialog.grab_set()
+
+        tk.Label(dialog, text="BUSCAR POR NOMBRE O DOCUMENTO:", font=('Segoe UI', 10, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=10)
+        ent_bus = tk.Entry(dialog, font=('Segoe UI', 12), bg="#252525", fg="white", insertbackground="white")
+        ent_bus.pack(fill=tk.X, padx=20, pady=5)
+        ent_bus.focus()
+
+        tree_frame = tk.Frame(dialog, bg=self.colors['bg_panel'])
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+
+        tree = ttk.Treeview(tree_frame, columns=("ID", "Nombre", "Doc"), show="headings", height=8)
+        tree.heading("ID", text="ID"); tree.column("ID", width=40)
+        tree.heading("Nombre", text="NOMBRE"); tree.column("Nombre", width=250)
+        tree.heading("Doc", text="DOCUMENTO"); tree.column("Doc", width=120)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def buscar(e=None):
+            for i in tree.get_children(): tree.delete(i)
+            filtro = ent_bus.get()
+            try:
+                conn = get_connection()
+                with conn.cursor() as cursor:
+                    sql = "SELECT id, nombre, documento FROM clientes WHERE empresa_id=%s AND (nombre LIKE %s OR documento LIKE %s) LIMIT 30"
+                    cursor.execute(sql, (self.empresa_id, f"%{filtro}%", f"%{filtro}%"))
+                    for r in cursor.fetchall():
+                        tree.insert("", tk.END, values=(r['id'], r['nombre'], r['documento']))
+                conn.close()
+            except: pass
+
+        ent_bus.bind("<KeyRelease>", buscar)
+
+        def seleccionar(e=None):
+            item = tree.selection()
+            if item:
+                val = tree.item(item, "values")
+                self.cliente_actual = {"id": val[0], "nombre": val[1]}
+                self.lbl_cliente.config(text=f"CLIENTE: {str(val[1]).upper()}")
+                dialog.destroy()
+            else:
+                messagebox.showwarning("Atención", "Seleccione un cliente de la lista")
+
+        tk.Button(dialog, text="SELECCIONAR CLIENTE (ENTER)", font=('Segoe UI', 10, 'bold'), bg=self.colors['success'], fg="white", command=seleccionar).pack(pady=15)
+        tree.bind("<Double-1>", seleccionar)
+        dialog.bind("<Return>", seleccionar)
+        buscar()
 
     def cargar_permiso_fraccion(self):
         try:
@@ -72,7 +141,6 @@ class POSApp:
             if 'conn' in locals() and conn: conn.close()
 
     def cargar_config_pagos(self):
-        """Carga las llaves de las pasarelas para saber qué botones mostrar"""
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
@@ -102,16 +170,23 @@ class POSApp:
                         fieldbackground=self.colors['bg_panel'], borderwidth=0, font=('Segoe UI', 10), rowheight=45)
         style.configure("Custom.Treeview.Heading", font=('Segoe UI', 10, 'bold'), background="#252525", foreground="white")
 
-    def create_widgets(self, nombre_negocio):
+    def create_widgets(self):
         main_container = tk.Frame(self.root, bg=self.colors['bg_main'], padx=20, pady=20)
         main_container.pack(fill=tk.BOTH, expand=True)
 
         header = tk.Frame(main_container, bg=self.colors['bg_main'])
         header.pack(fill=tk.X, pady=(0, 20))
-        tk.Label(header, text=nombre_negocio.upper(), font=('Segoe UI', 22, 'bold'), bg=self.colors['bg_main'], fg=self.colors['accent']).pack(side=tk.LEFT)
         
-        u_frame = tk.Frame(header, bg='#252525', padx=15, pady=8, highlightthickness=1, highlightbackground=self.colors['border'])
-        u_frame.pack(side=tk.RIGHT)
+        tk.Label(header, text=self.nombre_negocio, font=('Segoe UI', 22, 'bold'), bg=self.colors['bg_main'], fg=self.colors['accent']).pack(side=tk.LEFT)
+        
+        info_panel = tk.Frame(header, bg=self.colors['bg_main'])
+        info_panel.pack(side=tk.RIGHT)
+
+        self.lbl_cliente = tk.Label(info_panel, text="CLIENTE: CONSUMIDOR FINAL", font=('Segoe UI', 10, 'bold'), bg='#252525', fg=self.colors['warning'], padx=15, pady=8, highlightthickness=1, highlightbackground=self.colors['border'])
+        self.lbl_cliente.pack(side=tk.LEFT, padx=5)
+
+        u_frame = tk.Frame(info_panel, bg='#252525', padx=15, pady=8, highlightthickness=1, highlightbackground=self.colors['border'])
+        u_frame.pack(side=tk.LEFT)
         tk.Label(u_frame, text=f"USUARIO: {self.usuario_nombre}", font=('Segoe UI', 10, 'bold'), bg='#252525', fg=self.colors['success']).pack()
 
         indicadores = tk.Frame(main_container, bg=self.colors['bg_main'])
@@ -163,42 +238,39 @@ class POSApp:
         btn_container.pack(side=tk.RIGHT, padx=(20, 0))
         
         self.crear_boton(btn_container, "COBRAR (F2)", self.colors['success'], self.key_f2)
+        self.crear_boton(btn_container, "CLIENTE (F6)", self.colors['accent'], self.abrir_selector_cliente)
         self.crear_boton(btn_container, "QUITAR (F3)", self.colors['danger'], self.borrar_item)
         self.crear_boton(btn_container, "VACIAR (F4)", self.colors['warning'], self.limpiar_carrito)
         self.crear_boton(btn_container, "PROMOCIÓN/QR (F5)", self.colors['promo'], self.abrir_lector_qr)
         self.crear_boton(btn_container, "SALIR (ESC)", "#444", self.confirm_exit)
 
     def crear_boton(self, master, texto, color, comando):
-        tk.Button(master, text=texto, bg=color, fg="white", font=('Segoe UI', 9, 'bold'), relief="flat", padx=15, pady=10, command=comando, cursor="hand2").pack(side=tk.LEFT, padx=3)
+        btn = tk.Button(master, text=texto, bg=color, fg="white", font=('Segoe UI', 9, 'bold'), relief="flat", padx=15, pady=10, command=comando, cursor="hand2")
+        btn.pack(side=tk.LEFT, padx=3)
+        return btn
 
-    # --- LOGICA DE COBRO Y QR ---
     def mostrar_dialogo_pago(self):
-        # Recargar config por si cambió en el panel
         self.config_pagos = self.cargar_config_pagos()
-        
         dialog = tk.Toplevel(self.root); dialog.geometry("400x650"); dialog.configure(bg=self.colors['bg_panel'])
         dialog.title("Seleccionar Pago")
         tk.Label(dialog, text="FORMA DE PAGO", font=('Segoe UI', 14, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=20)
         btn_opts = {"font": ('Segoe UI', 11, 'bold'), "width": 25, "pady": 10, "fg": "white"}
         
-        # Opciones fijas
         tk.Button(dialog, text="EFECTIVO", command=lambda: [dialog.destroy(), self.mostrar_dialogo_efectivo()], bg=self.colors['success'], **btn_opts).pack(pady=5)
         tk.Button(dialog, text="TARJETA", command=lambda: [dialog.destroy(), self.procesar_pago("TARJETA")], bg=self.colors['accent'], **btn_opts).pack(pady=5)
         tk.Button(dialog, text="TRANSFERENCIA", command=lambda: [dialog.destroy(), self.procesar_pago("TRANSFERENCIA")], bg="#6c5ce7", **btn_opts).pack(pady=5)
 
-        # Opciones dinámicas (solo si hay datos en config_pagos)
         if self.config_pagos.get('mp_access_token'):
             tk.Button(dialog, text="QR MERCADO PAGO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MP")], bg="#009ee3", **btn_opts).pack(pady=5)
-        
         if self.config_pagos.get('pw_api_key'):
             tk.Button(dialog, text="QR PAYWAY", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("PW")], bg="#ee3d2f", **btn_opts).pack(pady=5)
-            
         if self.config_pagos.get('modo_api_key'):
             tk.Button(dialog, text="QR MODO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MODO")], bg="#5cb85c", **btn_opts).pack(pady=5)
 
     def mostrar_qr_pago(self, tipo):
         if not self.items: return
-        temp_v_id = crear_venta(self.empresa_id, self.usuario_id)
+        # Aquí se envían 3 argumentos
+        temp_v_id = crear_venta(self.empresa_id, self.usuario_id, self.cliente_actual["id"])
         
         qr_string = ""
         total_f = float(self.total)
@@ -211,12 +283,11 @@ class POSApp:
             return
 
         if not qr_string:
-            messagebox.showerror("Error", f"La pasarela {tipo} no devolvió un código válido. Revisa el Token en Configuración.")
+            messagebox.showerror("Error", f"La pasarela {tipo} no devolvió un código válido.")
             return
 
         qr_win = tk.Toplevel(self.root); qr_win.geometry("400x550"); qr_win.title(f"Pagar con QR - {tipo}")
         qr_win.configure(bg="white")
-        
         tk.Label(qr_win, text=f"ESCANEA PARA PAGAR $ {total_f:.2f}", font=("Arial", 12, "bold"), bg="white").pack(pady=10)
         
         qr_img = qrcode.make(qr_string).resize((300, 300))
@@ -234,12 +305,8 @@ class POSApp:
         items_limpios = []
         for it in self.items.values():
             it_cl = {
-                "id": int(it["id"]),
-                "nombre": str(it["nombre"]),
-                "cantidad": float(it["cantidad"]),
-                "precio": float(it["precio"]),
-                "subtotal": float(it["subtotal"]),
-                "costo": float(it.get("costo", 0))
+                "id": int(it["id"]), "nombre": str(it["nombre"]), "cantidad": float(it["cantidad"]),
+                "precio": float(it["precio"]), "subtotal": float(it["subtotal"]), "costo": float(it.get("costo", 0))
             }
             agregar_item(v_id, it_cl, it_cl["cantidad"])
             items_limpios.append(it_cl)
@@ -249,22 +316,20 @@ class POSApp:
         cerrar_venta(v_id, total_f, items_limpios, self.empresa_id, ganancia=ganancia_real)
         registrar_pago(v_id, total_f, f"QR_{tipo}", total_f, 0.0, self.empresa_id)
         
-        # Registrar en finanzas
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
                 cursor.execute("""
                     INSERT INTO finanzas (empresa_id, tipo, categoria, monto, descripcion, metodo_pago, usuario_id) 
                     VALUES (%s, 'INGRESO', 'Ventas', %s, %s, %s, %s)
-                """, (self.empresa_id, total_f, f"Venta POS QR #{v_id}", f"QR_{tipo}", self.usuario_id))
+                """, (self.empresa_id, total_f, f"Venta QR #{v_id} (Cliente ID {self.cliente_actual['id']})", f"QR_{tipo}", self.usuario_id))
             conn.commit()
-            
             txt = generar_ticket(conn, items_limpios, total_f, v_id, f"QR_{tipo}", 0.0, self.empresa_id)
             guardar_ticket(conn, txt, v_id, self.empresa_id)
             conn.close()
         except: pass
 
-        messagebox.showinfo("Venta", f"Pago por QR {tipo} registrado correctamente.")
+        messagebox.showinfo("Venta", f"Pago por QR {tipo} registrado.")
         self.nueva_venta()
         self.cargar_productos_stock()
 
@@ -279,7 +344,6 @@ class POSApp:
     def agregar_producto(self, texto):
         cantidad_input = Decimal('1')
         es_entrada_manual = False
-        
         if "*" in texto:
             try:
                 partes = texto.split("*")
@@ -315,7 +379,6 @@ class POSApp:
                 "subtotal": precio_base * cantidad_input, 
                 "imagen": producto.get("imagen"), "es_pesable": es_pesable_prod
             }
-            
         self.orden.append(sku)
         self.recalcular_precios()
         beep()
@@ -379,10 +442,7 @@ class POSApp:
         for item in self.carrito.get_children(): self.carrito.delete(item)
         for i in self.items.values():
             icono = self.obtener_icono(i.get("imagen"))
-            if i.get("es_pesable") and self.permite_fraccion_global:
-                cant_fmt = f"{float(i['cantidad']):.3f}"
-            else:
-                cant_fmt = f"{int(i['cantidad'])}"
+            cant_fmt = f"{float(i['cantidad']):.3f}" if i.get("es_pesable") and self.permite_fraccion_global else f"{int(i['cantidad'])}"
             self.carrito.insert("", tk.END, image=icono if icono else "", 
                                 values=(i['nombre'], cant_fmt, f"$ {float(i['precio']):.2f}", f"$ {float(i['subtotal']):.2f}"))
         self.total_label.config(text=f"$ {float(self.total):.2f}")
@@ -400,7 +460,8 @@ class POSApp:
     def procesar_pago(self, metodo):
         if not self.items: return
         try:
-            v_id = crear_venta(self.empresa_id, self.usuario_id)
+            # Llamada con 3 argumentos corregida
+            v_id = crear_venta(self.empresa_id, self.usuario_id, self.cliente_actual["id"])
             total_f = float(self.total)
             vuelto_f = float(self.vuelto)
             monto_recibido_f = total_f + vuelto_f
@@ -409,12 +470,8 @@ class POSApp:
             items_finales_float = []
             for sku, it in self.items.items():
                 it_f = {
-                    "id": int(it["id"]),
-                    "nombre": str(it["nombre"]),
-                    "cantidad": float(it["cantidad"]),
-                    "precio": float(it["precio"]),
-                    "subtotal": float(it["subtotal"]),
-                    "costo": float(it.get("costo", 0))
+                    "id": int(it["id"]), "nombre": str(it["nombre"]), "cantidad": float(it["cantidad"]),
+                    "precio": float(it["precio"]), "subtotal": float(it["subtotal"]), "costo": float(it.get("costo", 0))
                 }
                 items_finales_float.append(it_f)
                 agregar_item(v_id, it_f, it_f["cantidad"])
@@ -429,7 +486,7 @@ class POSApp:
                 cursor.execute("""
                     INSERT INTO finanzas (empresa_id, tipo, categoria, monto, descripcion, metodo_pago, usuario_id) 
                     VALUES (%s, 'INGRESO', 'Ventas', %s, %s, %s, %s)
-                """, (self.empresa_id, total_f, f"Venta POS #{v_id}", metodo, self.usuario_id))
+                """, (self.empresa_id, total_f, f"Venta #{v_id} (Cliente: {self.cliente_actual['nombre']})", metodo, self.usuario_id))
             conn.commit()
             
             txt = generar_ticket(conn, items_finales_float, total_f, v_id, metodo, vuelto_f, self.empresa_id)
@@ -444,11 +501,11 @@ class POSApp:
             messagebox.showerror("Error", f"Error al procesar: {e}")
 
     def nueva_venta(self):
-        self.items = {}
-        self.orden = []
-        self.total = Decimal('0')
-        self.vuelto = Decimal('0')
+        self.items = {}; self.orden = []
+        self.total = Decimal('0'); self.vuelto = Decimal('0')
         self.descuento_cupon_actual = Decimal('0')
+        self.cliente_actual = {"id": 0, "nombre": "CONSUMIDOR FINAL"}
+        self.lbl_cliente.config(text="CLIENTE: CONSUMIDOR FINAL")
         self.vuelto_label.config(text="")
         self.actualizar_carrito_ui()
 
@@ -469,8 +526,7 @@ class POSApp:
                 if rec_val >= self.total:
                     self.vuelto = rec_val - self.total
                     dialog.destroy(); self.procesar_pago("EFECTIVO")
-                else:
-                    messagebox.showwarning("Pago", "Monto insuficiente")
+                else: messagebox.showwarning("Pago", "Monto insuficiente")
             except: pass
         ent.bind('<Return>', lambda e: confirm())
 
@@ -479,6 +535,7 @@ class POSApp:
         self.root.bind('<F3>', lambda e: self.borrar_item())
         self.root.bind('<F4>', lambda e: self.limpiar_carrito())
         self.root.bind('<F5>', lambda e: self.abrir_lector_qr())
+        self.root.bind('<F6>', lambda e: self.abrir_selector_cliente())
         self.root.bind('<Escape>', lambda e: self.confirm_exit())
 
     def confirm_exit(self):

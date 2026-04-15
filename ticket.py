@@ -5,9 +5,11 @@ from db import get_connection
 def generar_ticket(conn, items, total, venta_id, metodo_pago, vuelto=0, empresa_id=1):
     """
     Genera el texto del ticket basado en la configuración de ConfigUI guardada en la DB.
+    Incluye los datos del cliente asociado si existe.
     """
     conf = {}
     cbte = None
+    cliente = None # Nueva variable para datos del cliente
     
     try:
         with conn.cursor() as cursor:
@@ -21,6 +23,18 @@ def generar_ticket(conn, items, total, venta_id, metodo_pago, vuelto=0, empresa_
                 cbte = cursor.fetchone()
             except:
                 pass
+
+            # --- NUEVA LÓGICA: BUSCAR DATOS DEL CLIENTE ASOCIADO A LA VENTA ---
+            try:
+                cursor.execute("""
+                    SELECT c.nombre, c.documento, c.condicion_iva 
+                    FROM clientes c
+                    INNER JOIN ventas v ON v.cliente_id = c.id
+                    WHERE v.id = %s AND v.empresa_id = %s
+                """, (venta_id, empresa_id))
+                cliente = cursor.fetchone()
+            except:
+                cliente = None
 
         linea = "=" * 40
         sep = "-" * 40
@@ -43,6 +57,17 @@ def generar_ticket(conn, items, total, venta_id, metodo_pago, vuelto=0, empresa_
         t.append(f"{tipo:^40}")
         t.append(f"P.V.: 00001 - Nro: {nro}")
         t.append(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        
+        # --- NUEVA SECCIÓN: DATOS DEL CLIENTE EN EL TICKET ---
+        if cliente:
+            t.append(sep)
+            t.append(f"CLIENTE: {str(cliente['nombre']).upper()[:30]}")
+            t.append(f"DOC/CUIT: {cliente['documento']}")
+            t.append(f"IVA: {cliente.get('condicion_iva', 'Consumidor Final')}")
+        else:
+            t.append(sep)
+            t.append(f"CLIENTE: CONSUMIDOR FINAL")
+            
         t.append(sep)
 
         # --- ITEMS ---
@@ -121,4 +146,4 @@ def guardar_ticket(conn, texto, venta_id, empresa_id):
 
     except Exception as e:
         print(f"Error al guardar ticket físico: {e}")
-        return None  # CORREGIDO: Se eliminó la coma que causaba el error de tupla
+        return None

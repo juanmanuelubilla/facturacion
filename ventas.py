@@ -1,14 +1,22 @@
 from db import get_connection
 from productos import descontar_stock
 
-def crear_venta(empresa_id, usuario_id):
+def crear_venta(empresa_id, usuario_id, cliente_id=None):
+    """
+    Crea un registro de venta. 
+    Se agregó cliente_id para coincidir con la llamada desde el GUI.
+    """
     conn = get_connection()
     try:
+        # Si el cliente_id es 0 (Consumidor Final), lo guardamos como None (NULL en DB)
+        cid = cliente_id if cliente_id != 0 else None
+        
         with conn.cursor() as cursor:
+            # Se agregó la columna cliente_id al INSERT
             cursor.execute("""
-                INSERT INTO ventas (total, ganancia, usuario_id, empresa_id, fecha) 
-                VALUES (0, 0, %s, %s, NOW())
-            """, (usuario_id, empresa_id))
+                INSERT INTO ventas (total, ganancia, usuario_id, empresa_id, cliente_id, fecha, estado) 
+                VALUES (0, 0, %s, %s, %s, NOW(), 'COMPLETADA')
+            """, (usuario_id, empresa_id, cid))
             venta_id = cursor.lastrowid
         conn.commit()
         return venta_id
@@ -41,7 +49,6 @@ def cerrar_venta(venta_id, total, items, empresa_id, ganancia=None):
     try:
         with conn.cursor() as cursor:
             # Si el POS ya nos manda la ganancia calculada (ganancia_real), la usamos.
-            # Si no, usamos tu lógica de bucle para calcularla aquí mismo.
             if ganancia is not None:
                 ganancia_total = ganancia
             else:
