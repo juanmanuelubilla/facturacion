@@ -132,7 +132,8 @@ DROP TABLE IF EXISTS `comprobante_afip`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `comprobante_afip` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `venta_id` int(11) NOT NULL,
+  `empresa_id` int(11) DEFAULT NULL,
+  `venta_id` int(11) DEFAULT NULL,
   `tipo_cbte` int(11) DEFAULT NULL,
   `punto_vta` int(11) DEFAULT NULL,
   `nro_cbte` int(11) DEFAULT NULL,
@@ -140,10 +141,10 @@ CREATE TABLE `comprobante_afip` (
   `fecha_vto_cae` date DEFAULT NULL,
   `estado` varchar(20) DEFAULT NULL,
   `response_afip` text DEFAULT NULL,
-  `fecha_creacion` timestamp NULL DEFAULT current_timestamp(),
-  `entorno` varchar(10) DEFAULT 'DEV',
+  `entorno` varchar(10) DEFAULT NULL,
+  `fecha_emision` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -152,9 +153,6 @@ CREATE TABLE `comprobante_afip` (
 
 LOCK TABLES `comprobante_afip` WRITE;
 /*!40000 ALTER TABLE `comprobante_afip` DISABLE KEYS */;
-INSERT INTO `comprobante_afip` VALUES
-(1,122,11,1,222,'74123456789012','2026-12-31','APROBADO',NULL,'2026-04-08 19:36:46','DEV'),
-(2,124,11,1,224,'74123456789012','2026-12-31','APROBADO',NULL,'2026-04-08 19:49:38','DEV');
 /*!40000 ALTER TABLE `comprobante_afip` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -273,7 +271,7 @@ CREATE TABLE `finanzas` (
   PRIMARY KEY (`id`),
   KEY `empresa_id` (`empresa_id`),
   CONSTRAINT `finanzas_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -294,7 +292,23 @@ INSERT INTO `finanzas` VALUES
 (9,1,'INGRESO','Ventas',2000.00,'Venta POS #178','EFECTIVO','2026-04-14','21:39:13',1),
 (10,1,'INGRESO','Ventas',4000.00,'Venta POS #179','EFECTIVO','2026-04-14','21:57:39',1),
 (11,1,'INGRESO','Ventas',2000.00,'Venta #180 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-14','22:51:35',1),
-(12,1,'INGRESO','Ventas',6000.00,'Venta #181 (Cliente: Juan Manuel Ubilla)','EFECTIVO','2026-04-14','22:52:57',1);
+(12,1,'INGRESO','Ventas',6000.00,'Venta #181 (Cliente: Juan Manuel Ubilla)','EFECTIVO','2026-04-14','22:52:57',1),
+(13,1,'INGRESO','Ventas',8000.00,'Venta #182 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','10:33:54',1),
+(14,1,'INGRESO','Ventas',2000.00,'Venta #183 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:00:58',1),
+(15,1,'INGRESO','Ventas',2000.00,'Venta #184 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:02:46',1),
+(16,1,'INGRESO','Ventas',1740.00,'Venta #185 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:03:40',1),
+(17,1,'INGRESO','Ventas',2000.00,'Venta #186 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:03:53',1),
+(18,1,'INGRESO','Ventas',2000.00,'Venta #187 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:19:04',1),
+(19,1,'INGRESO','Ventas',2000.00,'Venta #188 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:24:55',1),
+(20,1,'INGRESO','Ventas',2000.00,'Venta #189 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:26:27',1),
+(21,1,'INGRESO','Ventas',2000.00,'Venta #190 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:29:35',1),
+(22,1,'INGRESO','Ventas',2000.00,'Venta #191 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','11:30:33',1),
+(23,1,'INGRESO','Ventas',2000.00,'Venta #192 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','12:04:48',1),
+(24,1,'INGRESO','Ventas',2000.00,'Venta #193 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','12:16:51',1),
+(25,1,'INGRESO','Ventas',2000.00,'Venta #194 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','12:17:47',1),
+(26,1,'INGRESO','Ventas',2000.00,'Venta #195 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','12:18:43',1),
+(27,1,'INGRESO','Ventas',2000.00,'Venta #196 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','12:28:52',1),
+(28,1,'INGRESO','Ventas',2000.00,'Venta #197 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-15','12:35:49',1);
 /*!40000 ALTER TABLE `finanzas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -352,6 +366,15 @@ CREATE TABLE `nombre_negocio` (
   `empresa_id` int(11) NOT NULL,
   `permitir_fraccion` tinyint(1) DEFAULT 0,
   `ruta_imagenes` varchar(255) DEFAULT NULL,
+  `siempre_fiscal` tinyint(4) DEFAULT 0,
+  `iibb` float DEFAULT 0,
+  `margen_ganancia` float DEFAULT 0,
+  `afip_mock` tinyint(4) DEFAULT 0,
+  `ventas_fraccion` tinyint(4) DEFAULT 0,
+  `punto_vta` int(11) DEFAULT 1,
+  `afip_cert` text DEFAULT NULL,
+  `afip_key` text DEFAULT NULL,
+  `afip_prod` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -363,7 +386,7 @@ CREATE TABLE `nombre_negocio` (
 LOCK TABLES `nombre_negocio` WRITE;
 /*!40000 ALTER TABLE `nombre_negocio` DISABLE KEYS */;
 INSERT INTO `nombre_negocio` VALUES
-(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','/home/pi/facturacion/tickets',1,0,'/home/pi/facturacion/imagenes');
+(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','/home/pi/facturacion/tickets',1,0,'/home/pi/facturacion/imagenes',1,3,50,1,0,1,'','',0);
 /*!40000 ALTER TABLE `nombre_negocio` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -389,7 +412,7 @@ CREATE TABLE `pagos` (
   KEY `idx_pagos_fecha` (`fecha`),
   KEY `idx_pagos_estado` (`estado`),
   CONSTRAINT `pagos_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=50 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -447,7 +470,23 @@ INSERT INTO `pagos` VALUES
 (46,178,'EFECTIVO',2000.00,'2026-04-14 21:39:13',8000.00,10000.00,'completado',1),
 (47,179,'EFECTIVO',4000.00,'2026-04-14 21:57:39',6000.00,10000.00,'completado',1),
 (48,180,'EFECTIVO',2000.00,'2026-04-14 22:51:35',3000.00,5000.00,'completado',1),
-(49,181,'EFECTIVO',6000.00,'2026-04-14 22:52:57',0.00,6000.00,'completado',1);
+(49,181,'EFECTIVO',6000.00,'2026-04-14 22:52:57',0.00,6000.00,'completado',1),
+(50,182,'EFECTIVO',8000.00,'2026-04-15 10:33:54',2000.00,10000.00,'completado',1),
+(51,183,'EFECTIVO',2000.00,'2026-04-15 11:00:58',8000.00,10000.00,'completado',1),
+(52,184,'EFECTIVO',2000.00,'2026-04-15 11:02:46',0.00,2000.00,'completado',1),
+(53,185,'EFECTIVO',1740.00,'2026-04-15 11:03:40',1260.00,3000.00,'completado',1),
+(54,186,'EFECTIVO',2000.00,'2026-04-15 11:03:53',7000.00,9000.00,'completado',1),
+(55,187,'EFECTIVO',2000.00,'2026-04-15 11:19:03',8000.00,10000.00,'completado',1),
+(56,188,'EFECTIVO',2000.00,'2026-04-15 11:24:55',0.00,2000.00,'completado',1),
+(57,189,'EFECTIVO',2000.00,'2026-04-15 11:26:27',0.00,2000.00,'completado',1),
+(58,190,'EFECTIVO',2000.00,'2026-04-15 11:29:35',0.00,2000.00,'completado',1),
+(59,191,'EFECTIVO',2000.00,'2026-04-15 11:30:33',0.00,2000.00,'completado',1),
+(60,192,'EFECTIVO',2000.00,'2026-04-15 12:04:48',0.00,2000.00,'completado',1),
+(61,193,'EFECTIVO',2000.00,'2026-04-15 12:16:51',0.00,2000.00,'completado',1),
+(62,194,'EFECTIVO',2000.00,'2026-04-15 12:17:47',0.00,2000.00,'completado',1),
+(63,195,'EFECTIVO',2000.00,'2026-04-15 12:18:43',8000.00,10000.00,'completado',1),
+(64,196,'EFECTIVO',2000.00,'2026-04-15 12:28:52',8000.00,10000.00,'completado',1),
+(65,197,'EFECTIVO',2000.00,'2026-04-15 12:35:49',8000.00,10000.00,'completado',1);
 /*!40000 ALTER TABLE `pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -477,7 +516,7 @@ CREATE TABLE `productos` (
   UNIQUE KEY `codigo` (`codigo`),
   KEY `categoria_id` (`categoria_id`),
   CONSTRAINT `productos_ibfk_1` FOREIGN KEY (`categoria_id`) REFERENCES `categorias` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -487,11 +526,12 @@ CREATE TABLE `productos` (
 LOCK TABLES `productos` WRITE;
 /*!40000 ALTER TABLE `productos` DISABLE KEYS */;
 INSERT INTO `productos` VALUES
-(1,'123','Coca-Cola','None',2000.00,21,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1,1,0),
+(1,'123','Coca-Cola','None',2000.00,3,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1,1,0),
 (2,'22222','juan','',1860.00,100,1,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,1,0),
 (3,'62345','juanamnuel','',372.00,9,1,NULL,'2026-04-08 12:10:07',NULL,200.00,1,1,0),
 (4,'2542312','axelito','',174.00,5,1,NULL,'2026-04-08 21:41:21',NULL,100.00,1,1,0),
-(6,'12334','juan','',174.00,8,1,NULL,'2026-04-13 18:22:52',NULL,100.00,1,1,0);
+(6,'12334','juan','',174.00,8,1,NULL,'2026-04-13 18:22:52',NULL,100.00,1,1,0),
+(7,'000000','hola','',1740.00,9,1,NULL,'2026-04-15 11:03:12',NULL,1000.00,1,1,0);
 /*!40000 ALTER TABLE `productos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -668,7 +708,7 @@ CREATE TABLE `venta_items` (
   KEY `producto_id` (`producto_id`),
   CONSTRAINT `venta_items_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   CONSTRAINT `venta_items_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=84 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -760,7 +800,23 @@ INSERT INTO `venta_items` VALUES
 (80,178,1,1,2000.00,2000.00,1200.00),
 (81,179,1,2,2000.00,4000.00,1200.00),
 (82,180,1,1,2000.00,2000.00,1200.00),
-(83,181,1,3,2000.00,6000.00,1200.00);
+(83,181,1,3,2000.00,6000.00,1200.00),
+(84,182,1,4,2000.00,8000.00,1200.00),
+(85,183,1,1,2000.00,2000.00,1200.00),
+(86,184,1,1,2000.00,2000.00,1200.00),
+(87,185,7,1,1740.00,1740.00,1000.00),
+(88,186,1,1,2000.00,2000.00,1200.00),
+(89,187,1,1,2000.00,2000.00,1200.00),
+(90,188,1,1,2000.00,2000.00,1200.00),
+(91,189,1,1,2000.00,2000.00,1200.00),
+(92,190,1,1,2000.00,2000.00,1200.00),
+(93,191,1,1,2000.00,2000.00,1200.00),
+(94,192,1,1,2000.00,2000.00,1200.00),
+(95,193,1,1,2000.00,2000.00,1200.00),
+(96,194,1,1,2000.00,2000.00,1200.00),
+(97,195,1,1,2000.00,2000.00,1200.00),
+(98,196,1,1,2000.00,2000.00,1200.00),
+(99,197,1,1,2000.00,2000.00,1200.00);
 /*!40000 ALTER TABLE `venta_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -784,7 +840,7 @@ CREATE TABLE `ventas` (
   PRIMARY KEY (`id`),
   KEY `cliente_id` (`cliente_id`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=182 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=198 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -974,7 +1030,23 @@ INSERT INTO `ventas` VALUES
 (178,'2026-04-14 21:39:12',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
 (179,'2026-04-14 21:57:39',NULL,4000.00,NULL,'COMPLETADA',1600.00,1,1),
 (180,'2026-04-14 22:51:35',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(181,'2026-04-14 22:52:57',1,6000.00,NULL,'COMPLETADA',2400.00,1,1);
+(181,'2026-04-14 22:52:57',1,6000.00,NULL,'COMPLETADA',2400.00,1,1),
+(182,'2026-04-15 10:33:54',NULL,8000.00,NULL,'COMPLETADA',3200.00,1,1),
+(183,'2026-04-15 11:00:58',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(184,'2026-04-15 11:02:46',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(185,'2026-04-15 11:03:40',NULL,1740.00,NULL,'COMPLETADA',740.00,1,1),
+(186,'2026-04-15 11:03:53',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(187,'2026-04-15 11:19:03',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(188,'2026-04-15 11:24:55',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(189,'2026-04-15 11:26:27',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(190,'2026-04-15 11:29:35',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(191,'2026-04-15 11:30:33',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(192,'2026-04-15 12:04:48',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(193,'2026-04-15 12:16:51',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(194,'2026-04-15 12:17:47',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(195,'2026-04-15 12:18:43',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(196,'2026-04-15 12:28:51',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(197,'2026-04-15 12:35:49',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1);
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -995,4 +1067,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-14 23:28:02
+-- Dump completed on 2026-04-15 15:22:33

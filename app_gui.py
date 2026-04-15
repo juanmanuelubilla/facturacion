@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 import os
 import sys
 import qrcode
+import datetime
 
 # Importaciones de lógica
 from productos import (obtener_productos, buscar_producto_por_codigo, 
@@ -13,6 +14,13 @@ from productos import (obtener_productos, buscar_producto_por_codigo,
 from ventas import crear_venta, agregar_item, cerrar_venta, registrar_pago
 from ticket import generar_ticket, guardar_ticket 
 from db import get_connection
+
+# IMPORTACIÓN DE FACTURACIÓN ARCA (Con manejo de error de importación)
+try:
+    from facturacion_arca import FacturadorARCA
+except ImportError as e:
+    print(f"Advertencia: No se pudo cargar el módulo de facturación: {e}")
+    FacturadorARCA = None
 
 # IMPORTACIÓN DE PAGOS QR
 from pagos_py import generar_qr_mercadopago, generar_qr_payway, generar_qr_modo
@@ -31,7 +39,7 @@ class POSApp:
         self.nombre_negocio = self.config_negocio.get('nombre_negocio', nombre_negocio).upper()
         
         # DATOS DE CLIENTE (Por defecto Consumidor Final)
-        self.cliente_actual = {"id": 0, "nombre": "CONSUMIDOR FINAL"}
+        self.cliente_actual = {"id": 0, "nombre": "CONSUMIDOR FINAL", "documento": "0"}
         
         user_data = self.obtener_datos_usuario(self.usuario_id)
         self.usuario_nombre = user_data['nombre']
@@ -39,6 +47,12 @@ class POSApp:
         
         self.permite_fraccion_global = self.cargar_permiso_fraccion()
         self.config_pagos = self.cargar_config_pagos()
+        
+        # INICIALIZAR FACTURADOR
+        if FacturadorARCA:
+            self.facturador = FacturadorARCA(self.empresa_id)
+        else:
+            self.facturador = None
         
         self.root.title(f"{self.nombre_negocio} - Terminal POS")
         self.root.geometry("1450x900")
@@ -118,7 +132,7 @@ class POSApp:
             item = tree.selection()
             if item:
                 val = tree.item(item, "values")
-                self.cliente_actual = {"id": val[0], "nombre": val[1]}
+                self.cliente_actual = {"id": val[0], "nombre": val[1], "documento": val[2]}
                 self.lbl_cliente.config(text=f"CLIENTE: {str(val[1]).upper()}")
                 dialog.destroy()
             else:
@@ -269,7 +283,6 @@ class POSApp:
 
     def mostrar_qr_pago(self, tipo):
         if not self.items: return
-        # Aquí se envían 3 argumentos
         temp_v_id = crear_venta(self.empresa_id, self.usuario_id, self.cliente_actual["id"])
         
         qr_string = ""
@@ -314,6 +327,13 @@ class POSApp:
             
         ganancia_real = total_f - total_costo
         cerrar_venta(v_id, total_f, items_limpios, self.empresa_id, ganancia=ganancia_real)
+        
+        # --- DISPARAR FACTURACIÓN AFIP PARA QR (MERGEADO) ---
+        if self.facturador:
+            print(f"DEBUG: Facturando venta QR #{v_id}")
+            dni = self.cliente_actual.get('documento', '0')
+            self.facturador.emitir_factura_c(v_id, 1, dni, total_f)
+        
         registrar_pago(v_id, total_f, f"QR_{tipo}", total_f, 0.0, self.empresa_id)
         
         try:
@@ -337,6 +357,11 @@ class POSApp:
         for item in self.tabla.get_children(): self.tabla.delete(item)
         prods = obtener_productos(self.empresa_id)
         for p in prods:
+            # --- FILTRO DE STOCK: OCULTAR SI ES 0 O MENOR ---
+            stock_actual = float(p.get("stock", 0))
+            if stock_actual <= 0:
+                continue
+                
             icono = self.obtener_icono(p.get("imagen"))
             precio_p = float(p['precio']) if p['precio'] else 0.0
             self.tabla.insert("", tk.END, image=icono if icono else "", values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", p["stock"]))
@@ -359,6 +384,19 @@ class POSApp:
             producto = res[0]
             
         sku = producto["codigo"]
+        
+        # --- VALIDACIÓN DE STOCK: BLOQUEAR SI NO HAY DISPONIBLE ---
+        stock_disponible = Decimal(str(producto.get("stock", 0)))
+        cantidad_en_carrito = self.items[sku]["cantidad"] if sku in self.items else Decimal('0')
+        
+        if stock_disponible <= 0 or (cantidad_en_carrito + cantidad_input) > stock_disponible:
+            beep()
+            messagebox.showwarning("Stock Insuficiente", 
+                                f"No hay stock suficiente de: {producto['nombre']}\n"
+                                f"Disponible: {stock_disponible}")
+            self.input_codigo.delete(0, tk.END)
+            return
+
         precio_base = Decimal(str(producto["precio"]))
         costo_base = Decimal(str(producto.get("costo", 0)))
         es_pesable_prod = bool(producto.get('venta_por_peso', False))
@@ -460,7 +498,6 @@ class POSApp:
     def procesar_pago(self, metodo):
         if not self.items: return
         try:
-            # Llamada con 3 argumentos corregida
             v_id = crear_venta(self.empresa_id, self.usuario_id, self.cliente_actual["id"])
             total_f = float(self.total)
             vuelto_f = float(self.vuelto)
@@ -479,6 +516,13 @@ class POSApp:
             
             ganancia_real = total_f - total_costo
             cerrar_venta(v_id, total_f, items_finales_float, self.empresa_id, ganancia=ganancia_real)
+            
+            # --- DISPARAR FACTURACIÓN AFIP PARA TODOS LOS MÉTODOS (MERGEADO) ---
+            if self.facturador:
+                print(f"DEBUG: Facturando venta #{v_id} ({metodo})")
+                dni = self.cliente_actual.get('documento', '0')
+                self.facturador.emitir_factura_c(v_id, 1, dni, total_f)
+            
             registrar_pago(v_id, total_f, metodo, monto_recibido_f, vuelto_f, self.empresa_id)
             
             conn = get_connection()
@@ -504,7 +548,7 @@ class POSApp:
         self.items = {}; self.orden = []
         self.total = Decimal('0'); self.vuelto = Decimal('0')
         self.descuento_cupon_actual = Decimal('0')
-        self.cliente_actual = {"id": 0, "nombre": "CONSUMIDOR FINAL"}
+        self.cliente_actual = {"id": 0, "nombre": "CONSUMIDOR FINAL", "documento": "0"}
         self.lbl_cliente.config(text="CLIENTE: CONSUMIDOR FINAL")
         self.vuelto_label.config(text="")
         self.actualizar_carrito_ui()

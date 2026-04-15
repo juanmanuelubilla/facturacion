@@ -1,18 +1,15 @@
 from db import get_connection
 from productos import descontar_stock
 
+# 🔹 NUEVO: import del facturador
+from facturacion_arca import FacturadorARCA
+
+
 def crear_venta(empresa_id, usuario_id, cliente_id=None):
-    """
-    Crea un registro de venta. 
-    Se agregó cliente_id para coincidir con la llamada desde el GUI.
-    """
     conn = get_connection()
     try:
-        # Si el cliente_id es 0 (Consumidor Final), lo guardamos como None (NULL en DB)
-        cid = cliente_id if cliente_id != 0 else None
-        
+        cid = cliente_id if (cliente_id and cliente_id != 0) else None
         with conn.cursor() as cursor:
-            # Se agregó la columna cliente_id al INSERT
             cursor.execute("""
                 INSERT INTO ventas (total, ganancia, usuario_id, empresa_id, cliente_id, fecha, estado) 
                 VALUES (0, 0, %s, %s, %s, NOW(), 'COMPLETADA')
@@ -23,6 +20,7 @@ def crear_venta(empresa_id, usuario_id, cliente_id=None):
     finally:
         conn.close()
 
+
 def agregar_item(venta_id, item, cantidad):
     conn = get_connection()
     try:
@@ -30,7 +28,6 @@ def agregar_item(venta_id, item, cantidad):
             precio = float(item.get("precio", 0))
             costo = float(item.get("costo", 0))
             subtotal = precio * cantidad
-
             cursor.execute("""
                 INSERT INTO venta_items 
                 (venta_id, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
@@ -40,15 +37,11 @@ def agregar_item(venta_id, item, cantidad):
     finally:
         conn.close()
 
+
 def cerrar_venta(venta_id, total, items, empresa_id, ganancia=None):
-    """
-    Merge corregido: Ahora acepta 'ganancia' del POS para evitar errores técnicos.
-    Mantiene el descuento de stock y la integridad de la empresa.
-    """
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # Si el POS ya nos manda la ganancia calculada (ganancia_real), la usamos.
             if ganancia is not None:
                 ganancia_total = ganancia
             else:
@@ -59,10 +52,8 @@ def cerrar_venta(venta_id, total, items, empresa_id, ganancia=None):
                     cantidad = item.get("cantidad", 0)
                     ganancia_total += (precio - costo) * cantidad
 
-            # Siempre descontamos el stock independientemente de cómo venga la ganancia
             for item in items:
-                cantidad = item.get("cantidad", 0)
-                descontar_stock(item["id"], cantidad, empresa_id)
+                descontar_stock(item["id"], item.get("cantidad", 0), empresa_id)
 
             cursor.execute("""
                 UPDATE ventas 
@@ -73,6 +64,7 @@ def cerrar_venta(venta_id, total, items, empresa_id, ganancia=None):
     finally:
         conn.close()
 
+
 def registrar_pago(venta_id, monto, metodo_pago, entregado, vuelto, empresa_id):
     conn = get_connection()
     try:
@@ -82,5 +74,33 @@ def registrar_pago(venta_id, monto, metodo_pago, entregado, vuelto, empresa_id):
                 VALUES (%s, %s, %s, %s, %s, %s, 'completado')
             """, (venta_id, empresa_id, metodo_pago, monto, entregado, vuelto))
         conn.commit()
+
+        # 🔹 NUEVO: FACTURACIÓN AUTOMÁTICA AFIP
+        try:
+            facturador = FacturadorARCA(empresa_id)
+
+            # Obtener total real de la venta
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT total, cliente_id FROM ventas WHERE id=%s", (venta_id,))
+                row = cursor.fetchone()
+
+                total = float(row[0])
+                cliente_id = row[1]
+
+            # Si no hay cliente → consumidor final
+            dni_cliente = None
+
+            resultado = facturador.emitir_factura_c(
+                venta_id=venta_id,
+                punto_venta=1,
+                dni_cliente=dni_cliente,
+                total=total
+            )
+
+            print("AFIP OK:", resultado)
+
+        except Exception as e:
+            print("ERROR AFIP:", e)
+
     finally:
         conn.close()
