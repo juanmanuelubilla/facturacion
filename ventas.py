@@ -32,18 +32,29 @@ def agregar_item(venta_id, item, cantidad):
     finally:
         conn.close()
 
-def cerrar_venta(venta_id, total, items, empresa_id):
+def cerrar_venta(venta_id, total, items, empresa_id, ganancia=None):
+    """
+    Merge corregido: Ahora acepta 'ganancia' del POS para evitar errores técnicos.
+    Mantiene el descuento de stock y la integridad de la empresa.
+    """
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            ganancia_total = 0
+            # Si el POS ya nos manda la ganancia calculada (ganancia_real), la usamos.
+            # Si no, usamos tu lógica de bucle para calcularla aquí mismo.
+            if ganancia is not None:
+                ganancia_total = ganancia
+            else:
+                ganancia_total = 0
+                for item in items:
+                    precio = float(item.get("precio", 0))
+                    costo = float(item.get("costo", 0))
+                    cantidad = item.get("cantidad", 0)
+                    ganancia_total += (precio - costo) * cantidad
+
+            # Siempre descontamos el stock independientemente de cómo venga la ganancia
             for item in items:
-                precio = float(item.get("precio", 0))
-                costo = float(item.get("costo", 0))
                 cantidad = item.get("cantidad", 0)
-                ganancia_total += (precio - costo) * cantidad
-                
-                # Descontamos stock del inventario de ESTA empresa
                 descontar_stock(item["id"], cantidad, empresa_id)
 
             cursor.execute("""

@@ -5,7 +5,7 @@ def obtener_productos(empresa_id):
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen, ultimo_usuario_id
+                SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen, ultimo_usuario_id, venta_por_peso
                 FROM productos
                 WHERE activo = 1 AND empresa_id = %s
                 ORDER BY id DESC
@@ -19,7 +19,7 @@ def buscar_producto_por_codigo(codigo, empresa_id):
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen
+                SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen, venta_por_peso
                 FROM productos
                 WHERE codigo=%s AND activo = 1 AND empresa_id = %s
                 LIMIT 1
@@ -33,7 +33,7 @@ def buscar_productos_por_nombre(nombre, empresa_id):
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen
+                SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen, venta_por_peso
                 FROM productos
                 WHERE nombre LIKE %s AND activo = 1 AND empresa_id = %s
                 ORDER BY nombre ASC
@@ -55,14 +55,14 @@ def descontar_stock(producto_id, cantidad, empresa_id):
     finally:
         conn.close()
 
-def crear_producto(codigo, nombre, precio, costo, stock, imagen=None, descripcion=None, usuario_id=1, empresa_id=1):
+def crear_producto(codigo, nombre, precio, costo, stock, imagen=None, descripcion=None, usuario_id=1, empresa_id=1, venta_por_peso=0):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO productos (codigo, nombre, descripcion, precio, costo, stock, imagen, activo, ultimo_usuario_id, empresa_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, 1, %s, %s)
-            """, (codigo, nombre, descripcion, precio, costo, stock, imagen, usuario_id, empresa_id))
+                INSERT INTO productos (codigo, nombre, descripcion, precio, costo, stock, imagen, activo, ultimo_usuario_id, empresa_id, venta_por_peso)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 1, %s, %s, %s)
+            """, (codigo, nombre, descripcion, precio, costo, stock, imagen, usuario_id, empresa_id, venta_por_peso))
             conn.commit()
     finally:
         conn.close()
@@ -71,7 +71,6 @@ def validar_cupon(codigo_qr, empresa_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            # Buscamos el cupón escaneado (QR) que esté activo para esta empresa
             sql = """SELECT * FROM cupones 
                      WHERE codigo_qr = %s AND activo = 1 AND empresa_id = %s"""
             cursor.execute(sql, (codigo_qr, empresa_id))

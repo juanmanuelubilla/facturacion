@@ -6,7 +6,6 @@ import sys
 class ConfigUI:
     def __init__(self, root, nombre_negocio_actual="SISTEMA", empresa_id=1):
         self.root = root
-        # Intentamos obtener el ID de empresa, si viene 0 o vacío, manejamos la lógica de rescate
         try: 
             self.empresa_id = int(str(empresa_id).strip())
         except: 
@@ -61,6 +60,16 @@ class ConfigUI:
         self.ent_eslogan = self.crear_campo(self.tab_general, "Eslogan / Subtítulo:")
         self.ent_moneda = self.crear_campo(self.tab_general, "Símbolo de Moneda (ej: $):")
 
+        # --- OPCIÓN VENTAS POR PESO (Mantenida sin cambios) ---
+        self.var_fraccion = tk.BooleanVar()
+        chk_fraccion = tk.Checkbutton(
+            self.tab_general, text="HABILITAR VENTAS POR PESO / FRACCIÓN (Decimales)",
+            variable=self.var_fraccion, bg=self.colors['bg'], fg=self.colors['success'],
+            selectcolor=self.colors['card'], activebackground=self.colors['bg'],
+            font=('Segoe UI', 9, 'bold'), pady=10
+        )
+        chk_fraccion.pack(anchor="w")
+
         tk.Label(self.tab_general, text="CARPETA DE TICKETS", bg=self.colors['bg'], fg=self.colors['accent'], font=('Segoe UI', 9, 'bold')).pack(anchor="w", pady=(15, 2))
         ruta_cont = tk.Frame(self.tab_general, bg=self.colors['bg'])
         ruta_cont.pack(fill=tk.X)
@@ -113,7 +122,6 @@ class ConfigUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                # Modificado: Si no encuentra por empresa_id, trae el id 1 por defecto
                 cursor.execute("SELECT * FROM nombre_negocio WHERE empresa_id=%s OR id=1 LIMIT 1", (self.empresa_id,))
                 res = cursor.fetchone()
                 if res:
@@ -127,6 +135,7 @@ class ConfigUI:
                     self.ent_iibb.delete(0, tk.END); self.ent_iibb.insert(0, str(res.get('ingresos_brutos') or "0.00"))
                     self.ent_ganancia.delete(0, tk.END); self.ent_ganancia.insert(0, str(res.get('ganancia_sugerida') or "0.00"))
                     self.ent_ruta.delete(0, tk.END); self.ent_ruta.insert(0, res.get('ruta_tickets') or "")
+                    self.var_fraccion.set(bool(res.get('permitir_fraccion', False)))
             conn.close()
         except Exception as e: print(f"Error cargar_generales: {e}")
 
@@ -150,26 +159,27 @@ class ConfigUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                # Usamos UPDATE con id=1 para asegurar que pise la configuración global
                 sql_gen = """UPDATE nombre_negocio SET 
                              nombre_negocio=%s, eslogan=%s, moneda=%s, cuit=%s, direccion=%s, 
                              condicion_iva=%s, impuesto=%s, ingresos_brutos=%s, ganancia_sugerida=%s, 
-                             ruta_tickets=%s WHERE id=1"""
+                             ruta_tickets=%s, permitir_fraccion=%s WHERE empresa_id=%s OR id=1"""
                 
                 cursor.execute(sql_gen, (
                     self.ent_nombre.get(), self.ent_eslogan.get(), self.ent_moneda.get(), 
                     self.ent_cuit.get(), self.ent_direccion.get(), self.ent_iva_cond.get(), 
                     float(self.ent_iva.get() or 0), float(self.ent_iibb.get() or 0),
-                    float(self.ent_ganancia.get() or 0), self.ent_ruta.get()
+                    float(self.ent_ganancia.get() or 0), self.ent_ruta.get(), self.var_fraccion.get(),
+                    self.empresa_id
                 ))
 
                 sql_pay = """UPDATE config_pagos SET 
                              mp_access_token=%s, mp_user_id=%s, mp_external_id=%s, 
-                             pw_api_key=%s, pw_merchant_id=%s, modo_api_key=%s WHERE id=1"""
+                             pw_api_key=%s, pw_merchant_id=%s, modo_api_key=%s WHERE empresa_id=%s OR id=1"""
                 
                 cursor.execute(sql_pay, (
                     self.ent_mp_token.get(), self.ent_mp_id.get(), self.ent_mp_caja.get(),
-                    self.ent_pw_key.get(), self.ent_pw_merch.get(), self.ent_modo_key.get()
+                    self.ent_pw_key.get(), self.ent_pw_merch.get(), self.ent_modo_key.get(),
+                    self.empresa_id
                 ))
                 conn.commit()
             conn.close()

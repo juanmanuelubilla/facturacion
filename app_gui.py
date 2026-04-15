@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from PIL import Image, ImageTk
 import os
 import sys
-import qrcode  # Asegúrate de tener: pip install qrcode
+import qrcode
 
 # Importaciones de lógica
 from productos import (obtener_productos, buscar_producto_por_codigo, 
@@ -31,6 +31,9 @@ class POSApp:
         self.usuario_nombre = user_data['nombre']
         self.usuario_rol = user_data['rol']
         
+        # Cargar configuración de fraccionamiento al inicio
+        self.permite_fraccion_global = self.cargar_permiso_fraccion()
+        
         self.root.title(f"{nombre_negocio.upper()} - Terminal POS")
         self.root.geometry("1450x900")
         
@@ -53,6 +56,17 @@ class POSApp:
         self.cargar_productos_stock() 
         self.setup_keyboard_bindings()
         self.input_codigo.focus()
+
+    def cargar_permiso_fraccion(self):
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT permitir_fraccion FROM nombre_negocio WHERE empresa_id=%s OR id=1 LIMIT 1", (self.empresa_id,))
+                res = cursor.fetchone()
+                return bool(res['permitir_fraccion']) if res else False
+        except: return False
+        finally: 
+            if 'conn' in locals() and conn: conn.close()
 
     def obtener_datos_usuario(self, uid):
         try:
@@ -119,7 +133,7 @@ class POSApp:
         self.carrito = ttk.Treeview(car_frame, columns=("Prod", "Cant", "Precio", "Sub"), show="tree headings", style="Custom.Treeview")
         self.carrito.heading("#0", text="IMG"); self.carrito.column("#0", width=60)
         self.carrito.heading("Prod", text="PRODUCTO"); self.carrito.column("Prod", width=200)
-        self.carrito.heading("Cant", text="CANT."); self.carrito.column("Cant", width=60)
+        self.carrito.heading("Cant", text="CANT."); self.carrito.column("Cant", width=80)
         self.carrito.heading("Precio", text="UNIT."); self.carrito.column("Precio", width=90)
         self.carrito.heading("Sub", text="SUBTOTAL"); self.carrito.column("Sub", width=90)
         self.carrito.pack(fill=tk.BOTH, expand=True)
@@ -158,16 +172,13 @@ class POSApp:
 
     def mostrar_qr_pago(self, tipo):
         if not self.items: return
-        # Creamos una venta temporal para el external_reference
         temp_v_id = crear_venta(self.empresa_id, self.usuario_id)
         
         qr_string = ""
-        if tipo == "MP":
-            qr_string = generar_qr_mercadopago(temp_v_id, self.total)
-        elif tipo == "PW":
-            qr_string = generar_qr_payway(temp_v_id, self.total)
-        elif tipo == "MODO":
-            qr_string = generar_qr_modo(temp_v_id, self.total)
+        total_f = float(self.total)
+        if tipo == "MP": qr_string = generar_qr_mercadopago(temp_v_id, total_f)
+        elif tipo == "PW": qr_string = generar_qr_payway(temp_v_id, total_f)
+        elif tipo == "MODO": qr_string = generar_qr_modo(temp_v_id, total_f)
 
         if not qr_string:
             messagebox.showerror("Error", f"No se pudo conectar con la pasarela de pago {tipo}.")
@@ -176,9 +187,8 @@ class POSApp:
         qr_win = tk.Toplevel(self.root); qr_win.geometry("400x520"); qr_win.title(f"Pagar con QR - {tipo}")
         qr_win.configure(bg="white")
         
-        tk.Label(qr_win, text=f"ESCANEA PARA PAGAR $ {float(self.total):.2f}", font=("Arial", 12, "bold"), bg="white").pack(pady=10)
+        tk.Label(qr_win, text=f"ESCANEA PARA PAGAR $ {total_f:.2f}", font=("Arial", 12, "bold"), bg="white").pack(pady=10)
         
-        # Generar imagen QR
         qr_img = qrcode.make(qr_string).resize((300, 300))
         qr_photo = ImageTk.PhotoImage(qr_img)
         lbl_img = tk.Label(qr_win, image=qr_photo, bg="white")
@@ -189,36 +199,84 @@ class POSApp:
                   command=lambda: [qr_win.destroy(), self.finalizar_venta_qr(temp_v_id, tipo)]).pack(pady=20)
 
     def finalizar_venta_qr(self, v_id, tipo):
-        # Como el v_id ya fue creado al generar el QR, solo agregamos items y cerramos
-        for it in self.items.values(): agregar_item(v_id, it, it["cantidad"])
-        cerrar_venta(v_id, float(self.total), self.items.values(), self.empresa_id)
-        registrar_pago(v_id, float(self.total), f"QR_{tipo}", float(self.total), 0, self.empresa_id)
+        total_f = float(self.total)
+        total_costo = 0.0
+        items_limpios = []
+        for it in self.items.values():
+            it_cl = {
+                "id": int(it["id"]),
+                "nombre": str(it["nombre"]),
+                "cantidad": float(it["cantidad"]),
+                "precio": float(it["precio"]),
+                "subtotal": float(it["subtotal"]),
+                "costo": float(it.get("costo", 0))
+            }
+            agregar_item(v_id, it_cl, it_cl["cantidad"])
+            items_limpios.append(it_cl)
+            total_costo += (it_cl["costo"] * it_cl["cantidad"])
+            
+        ganancia_real = total_f - total_costo
+        # Pasamos la ganancia calculada a cerrar_venta
+        cerrar_venta(v_id, total_f, items_limpios, self.empresa_id, ganancia=ganancia_real)
+        registrar_pago(v_id, total_f, f"QR_{tipo}", total_f, 0.0, self.empresa_id)
         
         messagebox.showinfo("Venta", f"Pago por QR {tipo} registrado.")
         self.nueva_venta()
         self.cargar_productos_stock()
 
-    # --- RESTO DE FUNCIONES (STOCK, PRODUCTOS, DESCUENTOS) ---
+    # --- LÓGICA DE PRODUCTOS Y CARRITO ---
     def cargar_productos_stock(self):
         for item in self.tabla.get_children(): self.tabla.delete(item)
         prods = obtener_productos(self.empresa_id)
         for p in prods:
             icono = self.obtener_icono(p.get("imagen"))
-            self.tabla.insert("", tk.END, image=icono if icono else "", values=(p["codigo"], p["nombre"], f"$ {float(p['precio']):.2f}", p["stock"]))
+            precio_p = float(p['precio']) if p['precio'] else 0.0
+            self.tabla.insert("", tk.END, image=icono if icono else "", values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", p["stock"]))
 
     def agregar_producto(self, texto):
+        cantidad_input = Decimal('1')
+        es_entrada_manual = False
+        
+        if "*" in texto:
+            try:
+                partes = texto.split("*")
+                cantidad_input = Decimal(partes[0].replace(',', '.'))
+                texto = partes[1]
+                es_entrada_manual = True
+            except: pass
+
         producto = buscar_producto_por_codigo(texto, self.empresa_id)
         if not producto:
             res = buscar_productos_por_nombre(texto, self.empresa_id)
             if not res: beep(); self.input_codigo.delete(0, tk.END); return
             producto = res[0]
-        sku = producto["codigo"]; precio_base = Decimal(str(producto["precio"]))
-        if sku in self.items: self.items[sku]["cantidad"] += 1
+            
+        sku = producto["codigo"]
+        precio_base = Decimal(str(producto["precio"]))
+        costo_base = Decimal(str(producto.get("costo", 0)))
+        es_pesable_prod = bool(producto.get('venta_por_peso', False))
+
+        if not es_pesable_prod or not self.permite_fraccion_global:
+            if es_entrada_manual:
+                cantidad_input = Decimal(str(int(cantidad_input.to_integral_value(rounding=ROUND_HALF_UP))))
+                if cantidad_input <= 0: cantidad_input = Decimal('1')
+            else:
+                cantidad_input = Decimal('1')
+
+        if sku in self.items: 
+            self.items[sku]["cantidad"] += cantidad_input
         else:
-            self.items[sku] = {"id": producto["id"], "nombre": producto["nombre"], "cantidad": 1, 
-                               "precio_original": precio_base, "precio": precio_base, "subtotal": precio_base, 
-                               "imagen": producto.get("imagen")}
-        self.orden.append(sku); self.recalcular_precios(); beep(); self.input_codigo.delete(0, tk.END)
+            self.items[sku] = {
+                "id": producto["id"], "nombre": producto["nombre"], "cantidad": cantidad_input, 
+                "precio_original": precio_base, "costo": costo_base, "precio": precio_base, 
+                "subtotal": precio_base * cantidad_input, 
+                "imagen": producto.get("imagen"), "es_pesable": es_pesable_prod
+            }
+            
+        self.orden.append(sku)
+        self.recalcular_precios()
+        beep()
+        self.input_codigo.delete(0, tk.END)
 
     def recalcular_precios(self):
         self.total = Decimal('0')
@@ -227,7 +285,9 @@ class POSApp:
             p_final = item["precio_original"]
             if regla and item["cantidad"] >= regla["cantidad_minima"]:
                 p_final = item["precio_original"] * (1 - Decimal(str(regla["descuento_porcentaje"])) / 100)
-            item["precio"] = p_final; item["subtotal"] = item["precio"] * item["cantidad"]; self.total += item["subtotal"]
+            item["precio"] = p_final
+            item["subtotal"] = item["precio"] * item["cantidad"]
+            self.total += item["subtotal"]
 
         combos = obtener_combos_activos(self.empresa_id)
         for c in combos:
@@ -239,7 +299,8 @@ class POSApp:
                     for i in self.items.values():
                         if i['id'] == pid: self.total -= (i['subtotal'] * factor)
 
-        if self.descuento_cupon_actual > 0: self.total -= (self.total * self.descuento_cupon_actual / 100)
+        if self.descuento_cupon_actual > 0: 
+            self.total -= (self.total * self.descuento_cupon_actual / 100)
         self.actualizar_carrito_ui()
 
     def abrir_lector_qr(self):
@@ -260,8 +321,11 @@ class POSApp:
         if not self.orden: return
         sku = self.orden.pop()
         if sku in self.items:
-            self.items[sku]["cantidad"] -= 1
-            if self.items[sku]["cantidad"] <= 0: del self.items[sku]
+            if self.items[sku].get("es_pesable"):
+                del self.items[sku]
+            else:
+                self.items[sku]["cantidad"] -= 1
+                if self.items[sku]["cantidad"] <= 0: del self.items[sku]
         self.recalcular_precios()
 
     def limpiar_carrito(self):
@@ -272,8 +336,12 @@ class POSApp:
         for item in self.carrito.get_children(): self.carrito.delete(item)
         for i in self.items.values():
             icono = self.obtener_icono(i.get("imagen"))
+            if i.get("es_pesable") and self.permite_fraccion_global:
+                cant_fmt = f"{float(i['cantidad']):.3f}"
+            else:
+                cant_fmt = f"{int(i['cantidad'])}"
             self.carrito.insert("", tk.END, image=icono if icono else "", 
-                                values=(i['nombre'], i['cantidad'], f"$ {float(i['precio']):.2f}", f"$ {float(i['subtotal']):.2f}"))
+                                values=(i['nombre'], cant_fmt, f"$ {float(i['precio']):.2f}", f"$ {float(i['subtotal']):.2f}"))
         self.total_label.config(text=f"$ {float(self.total):.2f}")
 
     def obtener_icono(self, ruta):
@@ -286,28 +354,64 @@ class POSApp:
             return photo
         except: return None
 
+    # --- PROCESO FINAL DE PAGO (UTILIDAD CORREGIDA) ---
     def procesar_pago(self, metodo):
         if not self.items: return
         try:
             v_id = crear_venta(self.empresa_id, self.usuario_id)
-            for it in self.items.values(): agregar_item(v_id, it, it["cantidad"])
-            cerrar_venta(v_id, float(self.total), self.items.values(), self.empresa_id)
-            registrar_pago(v_id, float(self.total), metodo, float(self.total + self.vuelto), float(self.vuelto), self.empresa_id)
+            total_f = float(self.total)
+            vuelto_f = float(self.vuelto)
+            monto_recibido_f = total_f + vuelto_f
+            
+            total_costo = 0.0
+            items_finales_float = []
+            for sku, it in self.items.items():
+                it_f = {
+                    "id": int(it["id"]),
+                    "nombre": str(it["nombre"]),
+                    "cantidad": float(it["cantidad"]),
+                    "precio": float(it["precio"]),
+                    "subtotal": float(it["subtotal"]),
+                    "costo": float(it.get("costo", 0))
+                }
+                items_finales_float.append(it_f)
+                agregar_item(v_id, it_f, it_f["cantidad"])
+                total_costo += (it_f["costo"] * it_f["cantidad"])
+            
+            # CÁLCULO DE GANANCIA REAL: Total Venta - Suma de Costos
+            ganancia_real = total_f - total_costo
+            
+            # Pasamos ganancia real a cerrar_venta para que impacte en la utilidad de finanzas.py
+            cerrar_venta(v_id, total_f, items_finales_float, self.empresa_id, ganancia=ganancia_real)
+            registrar_pago(v_id, total_f, metodo, monto_recibido_f, vuelto_f, self.empresa_id)
+            
             conn = get_connection()
             with conn.cursor() as cursor:
-                cursor.execute("INSERT INTO finanzas (empresa_id, tipo, categoria, monto, descripcion, metodo_pago, usuario_id) VALUES (%s, 'INGRESO', 'Ventas', %s, %s, %s, %s)",
-                               (self.empresa_id, float(self.total), f"Venta POS #{v_id}", metodo, self.usuario_id))
+                cursor.execute("""
+                    INSERT INTO finanzas (empresa_id, tipo, categoria, monto, descripcion, metodo_pago, usuario_id) 
+                    VALUES (%s, 'INGRESO', 'Ventas', %s, %s, %s, %s)
+                """, (self.empresa_id, total_f, f"Venta POS #{v_id}", metodo, self.usuario_id))
             conn.commit()
-            txt = generar_ticket(conn, list(self.items.values()), float(self.total), v_id, metodo, float(self.vuelto), self.empresa_id)
-            guardar_ticket(conn, txt, v_id); conn.close()
-            self.vuelto_label.config(text=f"$ {float(self.vuelto):.2f}")
+            
+            txt = generar_ticket(conn, items_finales_float, total_f, v_id, metodo, vuelto_f, self.empresa_id)
+            guardar_ticket(conn, txt, v_id, self.empresa_id)
+            conn.close()
+            
+            self.vuelto_label.config(text=f"$ {vuelto_f:.2f}")
             messagebox.showinfo("Venta", f"Completada con éxito. Venta #{v_id}")
-            self.nueva_venta(); self.cargar_productos_stock()
-        except Exception as e: messagebox.showerror("Error", str(e))
+            self.nueva_venta()
+            self.cargar_productos_stock()
+        except Exception as e: 
+            messagebox.showerror("Error de Procesamiento", f"Detalle técnico: {str(e)}")
 
     def nueva_venta(self):
-        self.items = {}; self.orden = []; self.total = Decimal('0'); self.vuelto = Decimal('0'); self.descuento_cupon_actual = Decimal('0')
-        self.vuelto_label.config(text=""); self.actualizar_carrito_ui()
+        self.items = {}
+        self.orden = []
+        self.total = Decimal('0')
+        self.vuelto = Decimal('0')
+        self.descuento_cupon_actual = Decimal('0')
+        self.vuelto_label.config(text="")
+        self.actualizar_carrito_ui()
 
     def on_input_submitted(self, event):
         t = self.input_codigo.get().strip()
@@ -322,10 +426,12 @@ class POSApp:
         ent = tk.Entry(dialog, font=('Segoe UI', 22), justify='center'); ent.pack(pady=10); ent.focus()
         def confirm():
             try:
-                rec = Decimal(ent.get().replace(',', '.'))
-                if rec >= self.total:
-                    self.vuelto = rec - self.total
+                rec_val = Decimal(ent.get().replace(',', '.'))
+                if rec_val >= self.total:
+                    self.vuelto = rec_val - self.total
                     dialog.destroy(); self.procesar_pago("EFECTIVO")
+                else:
+                    messagebox.showwarning("Pago", "Monto insuficiente")
             except: pass
         ent.bind('<Return>', lambda e: confirm())
 

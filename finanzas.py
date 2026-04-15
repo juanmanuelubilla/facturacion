@@ -141,40 +141,52 @@ class FinanzasGUI:
         try:
             conn = get_connection()
             with conn.cursor() as cursor:
-                # 1. Movimientos Manuales (Excluyendo 'Ventas' automáticas para no duplicar en lista)
+                # 1. Movimientos Manuales del día
                 cursor.execute("""
                     SELECT tipo, categoria, monto, descripcion, DATE_FORMAT(hora, '%%H:%%i') as hora_f 
                     FROM finanzas 
-                    WHERE empresa_id = %s AND fecha = CURRENT_DATE AND categoria != 'Ventas'
+                    WHERE empresa_id = %s AND DATE(fecha) = CURRENT_DATE AND categoria != 'Ventas'
                     ORDER BY hora DESC
                 """, (self.empresa_id,))
                 movs = cursor.fetchall()
-                total_ingresos_extra, total_gastos = 0, 0
+                total_ingresos_extra, total_gastos = 0.0, 0.0
                 for m in movs:
                     monto = float(m['monto'])
-                    if m['tipo'] == 'INGRESO': total_ingresos_extra += monto
-                    else: total_gastos += monto
+                    if m['tipo'] == 'INGRESO': 
+                        total_ingresos_extra += monto
+                    else: 
+                        total_gastos += monto
                     self.tabla.insert("", tk.END, values=(m['tipo'], m['categoria'], f"${monto:.2f}", m['descripcion'], m['hora_f']))
 
-                # 2. Datos consolidados de Ventas
+                # 2. Datos consolidados de Ventas (Aquí corregimos el cálculo)
+                # Seleccionamos SUM(total) para el bruto y restamos el costo para la utilidad real
+                # Asumimos que la tabla 'ventas' tiene columna 'total' y la tabla 'detalles_ventas' tiene los costos
+                # O mejor aún, si tu tabla 'ventas' ya tiene 'ganancia' calculada (Precio - Costo)
                 cursor.execute("""
-                    SELECT SUM(total) as ventas_brutas, SUM(ganancia) as utilidad_ventas
-                    FROM ventas WHERE empresa_id = %s AND DATE(fecha) = CURRENT_DATE
+                    SELECT 
+                        IFNULL(SUM(total), 0) as ventas_brutas, 
+                        IFNULL(SUM(ganancia), 0) as utilidad_ventas
+                    FROM ventas 
+                    WHERE empresa_id = %s AND DATE(fecha) = CURRENT_DATE
                 """, (self.empresa_id,))
                 res_ventas = cursor.fetchone()
-                ventas_bruto = float(res_ventas['ventas_brutas'] or 0)
-                utilidad_de_ventas = float(res_ventas['utilidad_ventas'] or 0)
+                
+                ventas_bruto = float(res_ventas['ventas_brutas'])
+                utilidad_de_ventas = float(res_ventas['utilidad_ventas'])
 
+                # Actualizamos Cards
                 self.card_ventas.config(text=f"${ventas_bruto:.2f}")
                 self.card_gastos.config(text=f"${total_gastos:.2f}")
-                self.card_utilidad.config(text=f"${(utilidad_de_ventas + total_ingresos_extra - total_gastos):.2f}")
+                
+                # La Utilidad Real es: (Lo que gané vendiendo + otros ingresos) - Gastos Operativos
+                utilidad_real = utilidad_de_ventas + total_ingresos_extra - total_gastos
+                self.card_utilidad.config(text=f"${utilidad_real:.2f}")
+                
             conn.close()
-        except Exception as e: print(f"Error reporte: {e}")
+        except Exception as e: 
+            print(f"Error reporte: {e}")
 
     def abrir_reportes(self):
-        # Aquí puedes llamar a la clase ReportesGUI del otro módulo
-        # from reportes import ReportesGUI
-        # ReportesGUI(self.root, self.empresa_id)
         messagebox.showinfo("Reportes", "Módulo de Reportes Históricos (Matplotlib) inicializado.")
 
 if __name__ == "__main__":
