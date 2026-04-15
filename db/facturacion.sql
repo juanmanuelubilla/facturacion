@@ -628,7 +628,7 @@ CREATE TABLE `usuarios` (
   `rol` enum('admin','jefe','cajero') NOT NULL DEFAULT 'cajero',
   `empresa_id` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -638,10 +638,13 @@ CREATE TABLE `usuarios` (
 LOCK TABLES `usuarios` WRITE;
 /*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
 INSERT INTO `usuarios` VALUES
-(1,'ubilla','a6ace2cf5fb423550d66c67b83a0e91af70a522fa58c7ad4dab6b9f94c082656','admin',0),
-(2,'jefe','452b889d10df869834152618463e1c07ce88001a40c9fff5d4fdf300c65684c6','jefe',0),
-(3,'cajero','f976d9b6177d7595d3d45c3c927b0a813c21fac23ed9e5f938813925f6d5eb27','cajero',0),
-(4,'cajero','fea740101dbb727886b6908e7bc196a55054374c6827b41a60081c2525975b4d','cajero',0);
+(1,'ubilla','a6ace2cf5fb423550d66c67b83a0e91af70a522fa58c7ad4dab6b9f94c082656','admin',1),
+(2,'jefe','452b889d10df869834152618463e1c07ce88001a40c9fff5d4fdf300c65684c6','jefe',1),
+(3,'cajero','f976d9b6177d7595d3d45c3c927b0a813c21fac23ed9e5f938813925f6d5eb27','cajero',1),
+(4,'cajero','fea740101dbb727886b6908e7bc196a55054374c6827b41a60081c2525975b4d','cajero',1),
+(5,'prueba','a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3','admin',1),
+(6,'juanmanuel','f809ccfef1ca97649e592dbfcb2a4c7e2b684d3afabae170f9946715a68893f4','admin',1),
+(7,'axel','4183b9f5ed14b64d012ce1e728cfa1e7afc399cb82b6729b222784db6b1a50a7','admin',1);
 /*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -992,4 +995,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-14 22:54:20
+-- Dump completed on 2026-04-14 23:28:02
