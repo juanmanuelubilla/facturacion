@@ -171,6 +171,7 @@ CREATE TABLE `config_pagos` (
   `pw_api_key` text DEFAULT NULL,
   `pw_merchant_id` varchar(50) DEFAULT NULL,
   `empresa_id` int(11) NOT NULL,
+  `modo_api_key` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -182,7 +183,7 @@ CREATE TABLE `config_pagos` (
 LOCK TABLES `config_pagos` WRITE;
 /*!40000 ALTER TABLE `config_pagos` DISABLE KEYS */;
 INSERT INTO `config_pagos` VALUES
-(1,'TEST-TOKEN-123','','CAJA_01',1,'','',0);
+(1,'TEST-TOKEN-123','','CAJA_01',1,'','',0,'');
 /*!40000 ALTER TABLE `config_pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -269,7 +270,7 @@ CREATE TABLE `finanzas` (
   PRIMARY KEY (`id`),
   KEY `empresa_id` (`empresa_id`),
   CONSTRAINT `finanzas_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -284,7 +285,11 @@ INSERT INTO `finanzas` VALUES
 (3,1,'INGRESO','Ventas',2000.00,'Venta POS #169','EFECTIVO','2026-04-14','12:37:48',1),
 (4,1,'INGRESO','Ventas',2000.00,'Venta POS #170','EFECTIVO','2026-04-14','12:40:01',1),
 (5,1,'INGRESO','Ventas',2000.00,'Venta POS #172','EFECTIVO','2026-04-14','21:01:16',1),
-(6,1,'INGRESO','Ventas',2000.00,'Venta POS #175','EFECTIVO','2026-04-14','21:14:29',1);
+(6,1,'INGRESO','Ventas',2000.00,'Venta POS #175','EFECTIVO','2026-04-14','21:14:29',1),
+(7,1,'INGRESO','Ventas',2000.00,'Venta POS #176','EFECTIVO','2026-04-14','21:36:19',1),
+(8,1,'INGRESO','Ventas',2000.00,'Venta POS #177','EFECTIVO','2026-04-14','21:37:05',1),
+(9,1,'INGRESO','Ventas',2000.00,'Venta POS #178','EFECTIVO','2026-04-14','21:39:13',1),
+(10,1,'INGRESO','Ventas',4000.00,'Venta POS #179','EFECTIVO','2026-04-14','21:57:39',1);
 /*!40000 ALTER TABLE `finanzas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -341,6 +346,7 @@ CREATE TABLE `nombre_negocio` (
   `ruta_tickets` varchar(255) DEFAULT '',
   `empresa_id` int(11) NOT NULL,
   `permitir_fraccion` tinyint(1) DEFAULT 0,
+  `ruta_imagenes` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -352,7 +358,7 @@ CREATE TABLE `nombre_negocio` (
 LOCK TABLES `nombre_negocio` WRITE;
 /*!40000 ALTER TABLE `nombre_negocio` DISABLE KEYS */;
 INSERT INTO `nombre_negocio` VALUES
-(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','/home/pi/facturacion',0,0);
+(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','/home/pi/facturacion/tickets',0,0,'/home/pi/facturacion/imagenes');
 /*!40000 ALTER TABLE `nombre_negocio` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -378,7 +384,7 @@ CREATE TABLE `pagos` (
   KEY `idx_pagos_fecha` (`fecha`),
   KEY `idx_pagos_estado` (`estado`),
   CONSTRAINT `pagos_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -430,7 +436,11 @@ INSERT INTO `pagos` VALUES
 (40,169,'EFECTIVO',2000.00,'2026-04-14 12:37:48',8000.00,10000.00,'completado',1),
 (41,170,'EFECTIVO',2000.00,'2026-04-14 12:40:01',1000.00,3000.00,'completado',1),
 (42,172,'EFECTIVO',2000.00,'2026-04-14 21:01:16',1000.00,3000.00,'completado',1),
-(43,175,'EFECTIVO',2000.00,'2026-04-14 21:14:29',3000.00,5000.00,'completado',1);
+(43,175,'EFECTIVO',2000.00,'2026-04-14 21:14:29',3000.00,5000.00,'completado',1),
+(44,176,'EFECTIVO',2000.00,'2026-04-14 21:36:19',8000.00,10000.00,'completado',1),
+(45,177,'EFECTIVO',2000.00,'2026-04-14 21:37:05',3000.00,5000.00,'completado',1),
+(46,178,'EFECTIVO',2000.00,'2026-04-14 21:39:13',8000.00,10000.00,'completado',1),
+(47,179,'EFECTIVO',4000.00,'2026-04-14 21:57:39',6000.00,10000.00,'completado',1);
 /*!40000 ALTER TABLE `pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -470,7 +480,7 @@ CREATE TABLE `productos` (
 LOCK TABLES `productos` WRITE;
 /*!40000 ALTER TABLE `productos` DISABLE KEYS */;
 INSERT INTO `productos` VALUES
-(1,'123','Coca-Cola','None',2000.00,30,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1,1,0),
+(1,'123','Coca-Cola','None',2000.00,25,1,NULL,'2026-04-04 11:47:18','imagenes/123.png',1200.00,1,1,0),
 (2,'22222','juan','',1860.00,100,1,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,1,0),
 (3,'62345','juanamnuel','',372.00,9,1,NULL,'2026-04-08 12:10:07',NULL,200.00,1,1,0),
 (4,'2542312','axelito','',174.00,5,1,NULL,'2026-04-08 21:41:21',NULL,100.00,1,1,0),
@@ -648,7 +658,7 @@ CREATE TABLE `venta_items` (
   KEY `producto_id` (`producto_id`),
   CONSTRAINT `venta_items_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   CONSTRAINT `venta_items_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -734,7 +744,11 @@ INSERT INTO `venta_items` VALUES
 (74,172,1,1,2000.00,2000.00,0.00),
 (75,173,1,4,2000.00,8000.00,1200.00),
 (76,174,1,4,2000.00,8000.00,1200.00),
-(77,175,1,1,2000.00,2000.00,1200.00);
+(77,175,1,1,2000.00,2000.00,1200.00),
+(78,176,1,1,2000.00,2000.00,1200.00),
+(79,177,1,1,2000.00,2000.00,1200.00),
+(80,178,1,1,2000.00,2000.00,1200.00),
+(81,179,1,2,2000.00,4000.00,1200.00);
 /*!40000 ALTER TABLE `venta_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -758,7 +772,7 @@ CREATE TABLE `ventas` (
   PRIMARY KEY (`id`),
   KEY `cliente_id` (`cliente_id`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=176 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=180 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -942,7 +956,11 @@ INSERT INTO `ventas` VALUES
 (172,'2026-04-14 21:01:16',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1),
 (173,'2026-04-14 21:11:48',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
 (174,'2026-04-14 21:14:16',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(175,'2026-04-14 21:14:29',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1);
+(175,'2026-04-14 21:14:29',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(176,'2026-04-14 21:36:19',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(177,'2026-04-14 21:37:05',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(178,'2026-04-14 21:39:12',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(179,'2026-04-14 21:57:39',NULL,4000.00,NULL,'COMPLETADA',1600.00,1,1);
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -963,4 +981,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-14 21:22:32
+-- Dump completed on 2026-04-14 21:59:04

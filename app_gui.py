@@ -34,6 +34,9 @@ class POSApp:
         # Cargar configuración de fraccionamiento al inicio
         self.permite_fraccion_global = self.cargar_permiso_fraccion()
         
+        # Cargar configuración de pasarelas para validación de botones
+        self.config_pagos = self.cargar_config_pagos()
+        
         self.root.title(f"{nombre_negocio.upper()} - Terminal POS")
         self.root.geometry("1450x900")
         
@@ -66,6 +69,17 @@ class POSApp:
                 return bool(res['permitir_fraccion']) if res else False
         except: return False
         finally: 
+            if 'conn' in locals() and conn: conn.close()
+
+    def cargar_config_pagos(self):
+        """Carga las llaves de las pasarelas para saber qué botones mostrar"""
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM config_pagos WHERE empresa_id=%s OR id=1 LIMIT 1", (self.empresa_id,))
+                return cursor.fetchone() or {}
+        except: return {}
+        finally:
             if 'conn' in locals() and conn: conn.close()
 
     def obtener_datos_usuario(self, uid):
@@ -159,16 +173,28 @@ class POSApp:
 
     # --- LOGICA DE COBRO Y QR ---
     def mostrar_dialogo_pago(self):
+        # Recargar config por si cambió en el panel
+        self.config_pagos = self.cargar_config_pagos()
+        
         dialog = tk.Toplevel(self.root); dialog.geometry("400x650"); dialog.configure(bg=self.colors['bg_panel'])
+        dialog.title("Seleccionar Pago")
         tk.Label(dialog, text="FORMA DE PAGO", font=('Segoe UI', 14, 'bold'), bg=self.colors['bg_panel'], fg="white").pack(pady=20)
         btn_opts = {"font": ('Segoe UI', 11, 'bold'), "width": 25, "pady": 10, "fg": "white"}
         
+        # Opciones fijas
         tk.Button(dialog, text="EFECTIVO", command=lambda: [dialog.destroy(), self.mostrar_dialogo_efectivo()], bg=self.colors['success'], **btn_opts).pack(pady=5)
         tk.Button(dialog, text="TARJETA", command=lambda: [dialog.destroy(), self.procesar_pago("TARJETA")], bg=self.colors['accent'], **btn_opts).pack(pady=5)
-        tk.Button(dialog, text="QR MERCADO PAGO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MP")], bg="#009ee3", **btn_opts).pack(pady=5)
-        tk.Button(dialog, text="QR PAYWAY", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("PW")], bg="#ee3d2f", **btn_opts).pack(pady=5)
-        tk.Button(dialog, text="QR MODO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MODO")], bg="#5cb85c", **btn_opts).pack(pady=5)
         tk.Button(dialog, text="TRANSFERENCIA", command=lambda: [dialog.destroy(), self.procesar_pago("TRANSFERENCIA")], bg="#6c5ce7", **btn_opts).pack(pady=5)
+
+        # Opciones dinámicas (solo si hay datos en config_pagos)
+        if self.config_pagos.get('mp_access_token'):
+            tk.Button(dialog, text="QR MERCADO PAGO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MP")], bg="#009ee3", **btn_opts).pack(pady=5)
+        
+        if self.config_pagos.get('pw_api_key'):
+            tk.Button(dialog, text="QR PAYWAY", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("PW")], bg="#ee3d2f", **btn_opts).pack(pady=5)
+            
+        if self.config_pagos.get('modo_api_key'):
+            tk.Button(dialog, text="QR MODO", command=lambda: [dialog.destroy(), self.mostrar_qr_pago("MODO")], bg="#5cb85c", **btn_opts).pack(pady=5)
 
     def mostrar_qr_pago(self, tipo):
         if not self.items: return
@@ -176,15 +202,19 @@ class POSApp:
         
         qr_string = ""
         total_f = float(self.total)
-        if tipo == "MP": qr_string = generar_qr_mercadopago(temp_v_id, total_f)
-        elif tipo == "PW": qr_string = generar_qr_payway(temp_v_id, total_f)
-        elif tipo == "MODO": qr_string = generar_qr_modo(temp_v_id, total_f)
-
-        if not qr_string:
-            messagebox.showerror("Error", f"No se pudo conectar con la pasarela de pago {tipo}.")
+        try:
+            if tipo == "MP": qr_string = generar_qr_mercadopago(temp_v_id, total_f)
+            elif tipo == "PW": qr_string = generar_qr_payway(temp_v_id, total_f)
+            elif tipo == "MODO": qr_string = generar_qr_modo(temp_v_id, total_f)
+        except Exception as e:
+            messagebox.showerror("Error Pasarela", f"Error al conectar con {tipo}: {e}")
             return
 
-        qr_win = tk.Toplevel(self.root); qr_win.geometry("400x520"); qr_win.title(f"Pagar con QR - {tipo}")
+        if not qr_string:
+            messagebox.showerror("Error", f"La pasarela {tipo} no devolvió un código válido. Revisa el Token en Configuración.")
+            return
+
+        qr_win = tk.Toplevel(self.root); qr_win.geometry("400x550"); qr_win.title(f"Pagar con QR - {tipo}")
         qr_win.configure(bg="white")
         
         tk.Label(qr_win, text=f"ESCANEA PARA PAGAR $ {total_f:.2f}", font=("Arial", 12, "bold"), bg="white").pack(pady=10)
@@ -195,7 +225,7 @@ class POSApp:
         lbl_img.image = qr_photo
         lbl_img.pack(pady=10)
 
-        tk.Button(qr_win, text="CONFIRMAR PAGO REALIZADO", bg=self.colors['success'], fg="white", 
+        tk.Button(qr_win, text="CONFIRMAR PAGO REALIZADO", bg=self.colors['success'], fg="white", font=("Arial", 10, "bold"),
                   command=lambda: [qr_win.destroy(), self.finalizar_venta_qr(temp_v_id, tipo)]).pack(pady=20)
 
     def finalizar_venta_qr(self, v_id, tipo):
@@ -216,15 +246,28 @@ class POSApp:
             total_costo += (it_cl["costo"] * it_cl["cantidad"])
             
         ganancia_real = total_f - total_costo
-        # Pasamos la ganancia calculada a cerrar_venta
         cerrar_venta(v_id, total_f, items_limpios, self.empresa_id, ganancia=ganancia_real)
         registrar_pago(v_id, total_f, f"QR_{tipo}", total_f, 0.0, self.empresa_id)
         
-        messagebox.showinfo("Venta", f"Pago por QR {tipo} registrado.")
+        # Registrar en finanzas
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO finanzas (empresa_id, tipo, categoria, monto, descripcion, metodo_pago, usuario_id) 
+                    VALUES (%s, 'INGRESO', 'Ventas', %s, %s, %s, %s)
+                """, (self.empresa_id, total_f, f"Venta POS QR #{v_id}", f"QR_{tipo}", self.usuario_id))
+            conn.commit()
+            
+            txt = generar_ticket(conn, items_limpios, total_f, v_id, f"QR_{tipo}", 0.0, self.empresa_id)
+            guardar_ticket(conn, txt, v_id, self.empresa_id)
+            conn.close()
+        except: pass
+
+        messagebox.showinfo("Venta", f"Pago por QR {tipo} registrado correctamente.")
         self.nueva_venta()
         self.cargar_productos_stock()
 
-    # --- LÓGICA DE PRODUCTOS Y CARRITO ---
     def cargar_productos_stock(self):
         for item in self.tabla.get_children(): self.tabla.delete(item)
         prods = obtener_productos(self.empresa_id)
@@ -354,7 +397,6 @@ class POSApp:
             return photo
         except: return None
 
-    # --- PROCESO FINAL DE PAGO (UTILIDAD CORREGIDA) ---
     def procesar_pago(self, metodo):
         if not self.items: return
         try:
@@ -378,10 +420,7 @@ class POSApp:
                 agregar_item(v_id, it_f, it_f["cantidad"])
                 total_costo += (it_f["costo"] * it_f["cantidad"])
             
-            # CÁLCULO DE GANANCIA REAL: Total Venta - Suma de Costos
             ganancia_real = total_f - total_costo
-            
-            # Pasamos ganancia real a cerrar_venta para que impacte en la utilidad de finanzas.py
             cerrar_venta(v_id, total_f, items_finales_float, self.empresa_id, ganancia=ganancia_real)
             registrar_pago(v_id, total_f, metodo, monto_recibido_f, vuelto_f, self.empresa_id)
             
@@ -398,11 +437,11 @@ class POSApp:
             conn.close()
             
             self.vuelto_label.config(text=f"$ {vuelto_f:.2f}")
-            messagebox.showinfo("Venta", f"Completada con éxito. Venta #{v_id}")
+            messagebox.showinfo("Venta", f"Venta #{v_id} completada.")
             self.nueva_venta()
             self.cargar_productos_stock()
         except Exception as e: 
-            messagebox.showerror("Error de Procesamiento", f"Detalle técnico: {str(e)}")
+            messagebox.showerror("Error", f"Error al procesar: {e}")
 
     def nueva_venta(self):
         self.items = {}
@@ -446,10 +485,6 @@ class POSApp:
         if messagebox.askyesno("Salir", "¿Cerrar terminal de ventas?"): self.root.destroy()
 
 if __name__ == "__main__":
-    args = sys.argv
-    negocio_nom = args[1] if len(args) > 1 else "NEXUS"
-    emp_id = args[2] if len(args) > 2 else 1
-    usu_id = args[3] if len(args) > 3 else 1
     root = tk.Tk()
-    app = POSApp(root, negocio_nom, emp_id, usu_id)
+    app = POSApp(root, "NEXUS", 1, 1)
     root.mainloop()
