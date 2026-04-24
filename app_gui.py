@@ -756,6 +756,7 @@ class POSApp:
         return resultado['cantidad']
     
     def agregar_producto(self, texto):
+        print(f"Intentando agregar producto con texto: '{texto}'")  # Depuración
         cantidad_input = Decimal('1')
         es_entrada_manual = False
         
@@ -769,9 +770,14 @@ class POSApp:
             except: pass
 
         producto = buscar_producto_por_codigo(texto, self.empresa_id)
+        print(f"Resultado de búsqueda por código: {producto}")  # Depuración
         if not producto:
+            print("Producto no encontrado por código, buscando por nombre...")  # Depuración
             res = buscar_productos_por_nombre(texto, self.empresa_id)
-            if not res: beep(); self.input_codigo.delete(0, tk.END); return
+            print(f"Resultado de búsqueda por nombre: {res}")  # Depuración
+            if not res: 
+                print("Producto no encontrado en ninguna búsqueda")  # Depuración
+                beep(); self.input_codigo.delete(0, tk.END); return
             producto = res[0]
             
         sku = producto["codigo"]
@@ -1352,16 +1358,42 @@ class POSApp:
     def agregar_producto_seleccionado(self, event):
         """Agrega el producto seleccionado de la tabla al carrito"""
         try:
-            seleccion = self.tabla.selection()
-            if not seleccion:
-                return
+            print(f"Evento doble clic en posición: y={event.y}")  # Depuración
             
-            item = self.tabla.item(seleccion[0])
-            valores = item['values']
+            # Obtener el item en la posición del cursor (más confiable que selection())
+            item = self.tabla.identify_row(event.y)
+            print(f"Item identificado: {item}")  # Depuración
+            
+            if not item:
+                print("No se pudo identificar el item en la posición del cursor")
+                # Intentar obtener el item seleccionado como fallback
+                seleccion = self.tabla.selection()
+                if seleccion:
+                    item = seleccion[0]
+                    print(f"Usando selección como fallback: {item}")
+                else:
+                    print("No hay item seleccionado como fallback")
+                    return
+            
+            # Si no hay selección, seleccionar el item donde se hizo clic
+            if not self.tabla.selection():
+                self.tabla.selection_set(item)
+            
+            valores = self.tabla.item(item)['values']
+            print(f"Valores obtenidos: {valores}")  # Depuración
             
             if valores and len(valores) > 0:
-                codigo = str(valores[0])  # SKU está en la primera columna, convertir a string
+                codigo_raw = valores[0]
+                # Manejo especial para códigos que podrían ser interpretados como 0
+                if codigo_raw == 0 or codigo_raw == "0" or codigo_raw == "000000":
+                    codigo = "000000"
+                else:
+                    codigo = str(codigo_raw)
+                print(f"Código raw: {codigo_raw} (tipo: {type(codigo_raw)})")  # Depuración
+                print(f"Código a agregar: '{codigo}' (longitud: {len(codigo)})")  # Depuración
                 self.agregar_producto(codigo)
+            else:
+                print("No hay valores o están vacíos")
         except Exception as e:
             print(f"Error al agregar producto seleccionado: {e}")
             messagebox.showerror("Error", f"Error al agregar producto: {e}")
