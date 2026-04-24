@@ -23,11 +23,6 @@ class GestionGUI:
         # 1. Cargamos configuración fiscal con lógica de rescate
         self.config_fiscal = self.obtener_config_fiscal()
         
-        # Imprimir en consola para depuración técnica
-        print(f"--- SISTEMA INICIADO ---")
-        print(f"Negocio: {nombre_negocio} | Empresa ID: {self.empresa_id}")
-        print(f"Recargo total cargado: {self.config_fiscal['total']}%")
-        
         self.root.title(f"{nombre_negocio.upper()} - Gestión de Inventario")
         self.root.geometry("1450x850")
         
@@ -46,6 +41,14 @@ class GestionGUI:
         self.crear_widgets(nombre_negocio)
         self.panel_form.grid_remove() 
         self.cargar_productos()
+
+    @staticmethod
+    def _fmt_stock(stock, es_pesable=False):
+        try:
+            s = float(stock or 0)
+        except Exception:
+            s = 0.0
+        return f"{s:.3f}" if es_pesable else f"{int(s)}"
 
     def obtener_config_fiscal(self):
         """Busca porcentajes. Prioridad: 1. Empresa actual, 2. Registro ID=1."""
@@ -70,8 +73,7 @@ class GestionGUI:
                     # Si los tres están en 0, devolvemos un log para saberlo
                     return {'total': total}
             return {'total': 0}
-        except Exception as e:
-            print(f"Error DB Fiscal: {e}")
+        except Exception:
             return {'total': 0}
         finally: 
             if 'conn' in locals(): conn.close()
@@ -171,6 +173,18 @@ class GestionGUI:
         self.txt_descripcion = tk.Text(self.panel_form, height=3, bg="#252525", fg="white")
         self.txt_descripcion.pack(fill=tk.X, pady=5)
 
+        self.var_venta_por_peso = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            self.panel_form,
+            text="VENDER POR FRACCIÓN / KILO",
+            variable=self.var_venta_por_peso,
+            bg=self.colors['bg_panel'],
+            fg="white",
+            selectcolor="#252525",
+            activebackground=self.colors['bg_panel'],
+            activeforeground="white"
+        ).pack(anchor="w", pady=(2, 8))
+
         self.preview_label = tk.Label(self.panel_form, text="SIN IMAGEN", bg="#252525", height=5)
         self.preview_label.pack(fill=tk.X, pady=10)
         tk.Button(self.panel_form, text="FOTO", command=self.seleccionar_imagen).pack(fill=tk.X)
@@ -186,8 +200,10 @@ class GestionGUI:
             sku, nom = str(p.get("codigo", "")), str(p.get("nombre", ""))
             if filtro and filtro not in sku.lower() and filtro not in nom.lower(): continue
             icono = self.obtener_icono(p.get("imagen"))
+            es_pesable = bool(int(p.get('venta_por_peso') or 0))
+            stock_txt = self._fmt_stock(p.get('stock', 0), es_pesable)
             self.tabla.insert("", tk.END, image=icono if icono else "",
-                values=(sku, nom, f"${float(p.get('costo', 0)):.2f}", f"${float(p.get('precio', 0)):.2f}", p.get('stock', 0)))
+                values=(sku, nom, f"${float(p.get('costo', 0)):.2f}", f"${float(p.get('precio', 0)):.2f}", stock_txt))
 
     def on_seleccionar_producto(self, event):
         sel = self.tabla.selection()
@@ -200,14 +216,15 @@ class GestionGUI:
         try:
             d = {k: v.get() for k, v in self.entries.items()}
             desc = self.txt_descripcion.get("1.0", tk.END).strip()
+            stock_normalizado = str(d['stock']).strip().replace(",", ".")
             conn = get_connection()
             with conn.cursor() as cursor:
                 if self.modo_formulario == "NUEVO":
-                    cursor.execute("INSERT INTO productos (codigo, nombre, descripcion, precio, costo, stock, imagen, ultimo_usuario_id, empresa_id, activo) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1)", 
-                                    (d['codigo'], d['nombre'], desc, d['precio'], d['costo'], d['stock'], self.imagen_ruta, self.usuario_id, self.empresa_id))
+                    cursor.execute("INSERT INTO productos (codigo, nombre, descripcion, precio, costo, stock, imagen, ultimo_usuario_id, empresa_id, activo, venta_por_peso) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,%s)", 
+                                    (d['codigo'], d['nombre'], desc, d['precio'], d['costo'], stock_normalizado, self.imagen_ruta, self.usuario_id, self.empresa_id, int(self.var_venta_por_peso.get())))
                 else:
-                    cursor.execute("UPDATE productos SET nombre=%s, descripcion=%s, precio=%s, costo=%s, stock=%s, imagen=%s, ultimo_usuario_id=%s WHERE codigo=%s AND empresa_id=%s", 
-                                    (d['nombre'], desc, d['precio'], d['costo'], d['stock'], self.imagen_ruta, self.usuario_id, d['codigo'], self.empresa_id))
+                    cursor.execute("UPDATE productos SET nombre=%s, descripcion=%s, precio=%s, costo=%s, stock=%s, imagen=%s, ultimo_usuario_id=%s, venta_por_peso=%s WHERE codigo=%s AND empresa_id=%s", 
+                                    (d['nombre'], desc, d['precio'], d['costo'], stock_normalizado, self.imagen_ruta, self.usuario_id, int(self.var_venta_por_peso.get()), d['codigo'], self.empresa_id))
             conn.commit(); conn.close()
             messagebox.showinfo("OK", "Guardado"); self.cargar_productos(); self.panel_form.grid_remove()
         except Exception as e: messagebox.showerror("Error", str(e))
@@ -239,8 +256,9 @@ class GestionGUI:
         self.entries['nombre'].insert(0, p["nombre"])
         self.entries['costo'].insert(0, p["costo"])
         self.entries['precio'].insert(0, p["precio"])
-        self.entries['stock'].insert(0, p["stock"])
+        self.entries['stock'].insert(0, self._fmt_stock(p.get("stock", 0), bool(int(p.get("venta_por_peso") or 0))))
         self.txt_descripcion.insert("1.0", p.get("descripcion") or "")
+        self.var_venta_por_peso.set(bool(int(p.get("venta_por_peso") or 0)))
         if p.get("imagen") and os.path.exists(p["imagen"]):
             self.imagen_ruta = p["imagen"]
             img = Image.open(p["imagen"]).resize((150, 150), Image.Resampling.LANCZOS)
@@ -252,6 +270,7 @@ class GestionGUI:
 
     def limpiar_formulario(self):
         for e in self.entries.values(): e.delete(0, tk.END)
+        self.var_venta_por_peso.set(False)
         self.txt_descripcion.delete("1.0", tk.END); self.preview_label.config(image="", text="SIN IMAGEN"); self.imagen_ruta = None
 
     def ordenar_columna(self, col):

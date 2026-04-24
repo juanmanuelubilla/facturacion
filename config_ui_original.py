@@ -3,8 +3,6 @@ from tkinter import ttk, messagebox, filedialog
 from db import get_connection
 import sys
 import os
-import datetime
-import subprocess
 
 class ConfigUI:
     def __init__(self, root, nombre_negocio_actual="SISTEMA", empresa_id=1):
@@ -29,17 +27,6 @@ class ConfigUI:
         self.configurar_estilo()
         self.init_ui()
         self.cargar_datos()
-
-    @staticmethod
-    def _db_flag_activo(valor):
-        """Convierte flags de DB (0/1, bool, str) a bool real."""
-        if isinstance(valor, bool):
-            return valor
-        if valor is None:
-            return False
-        if isinstance(valor, (int, float)):
-            return int(valor) == 1
-        return str(valor).strip().lower() in ("1", "true", "t", "si", "sí", "yes", "y", "on")
 
     def configurar_estilo(self):
         style = ttk.Style()
@@ -224,7 +211,7 @@ class ConfigUI:
                     self.ent_pw_merchant.insert(0, pagos.get('pw_merchant_id', ""))
             conn.close()
         except Exception as e: print(f"Error carga: {e}")
-    
+
     def guardar_todo(self):
         try:
             conn = get_connection()
@@ -260,8 +247,7 @@ class ConfigUI:
             messagebox.showinfo("Éxito", "Configuración completa guardada.")
             self.root.destroy()
         except Exception as e: messagebox.showerror("Error", f"No se pudo guardar: {str(e)}")
-    
-    
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = ConfigUI(root, "NEXUS", 1)

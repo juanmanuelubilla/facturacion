@@ -141,9 +141,7 @@ def guardar_ticket(conn, texto, venta_id, empresa_id):
         with open(archivo_path, "w", encoding="utf-8") as f:
             f.write(texto)
         
-        print(f"Ticket guardado con éxito en: {archivo_path}")
         return archivo_path
 
-    except Exception as e:
-        print(f"Error al guardar ticket físico: {e}")
+    except Exception:
         return None

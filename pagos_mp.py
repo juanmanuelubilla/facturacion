@@ -13,8 +13,7 @@ def obtener_config_mp(empresa_id): # <--- Filtramos por empresa
                 WHERE empresa_id = %s
             """, (empresa_id,))
             return cursor.fetchone()
-    except Exception as e:
-        print(f"Error accediendo a la DB de configuración MP: {e}")
+    except Exception:
         return None
     finally:
         if 'conn' in locals(): conn.close()
@@ -23,7 +22,6 @@ def generar_qr_mercadopago(venta_id, total, empresa_id): # <--- Recibe empresa_i
     config = obtener_config_mp(empresa_id)
     
     if not config or not config['mp_access_token'] or not config['mp_user_id']:
-        print(f"ERROR: Credenciales de MP no configuradas para la empresa {empresa_id}")
         return None
 
     try:
@@ -57,10 +55,7 @@ def generar_qr_mercadopago(venta_id, total, empresa_id): # <--- Recibe empresa_i
         
         if result["status"] in [200, 201]:
             return result["response"].get("qr_data")
-        else:
-            print(f"Error API MP Empresa {empresa_id}: {result['response']}")
-            return None
+        return None
             
-    except Exception as e:
-        print(f"Fallo crítico Mercado Pago: {e}")
+    except Exception:
         return None

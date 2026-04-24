@@ -57,8 +57,8 @@ class UsuariosGUI:
                         vals = (u[0], u[1], str(u[2]).upper())
                         
                     self.tabla.insert("", tk.END, values=vals)
-        except Exception as e:
-            print(f"Error en carga: {e}")
+        except Exception:
+            pass
         finally:
             conn.close()
 

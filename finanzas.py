@@ -166,8 +166,8 @@ class FinanzasGUI:
                 self.card_utilidad.config(text=f"${utilidad_real:.2f}")
                 
             conn.close()
-        except Exception as e: 
-            print(f"Error reporte: {e}")
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     root = tk.Tk()

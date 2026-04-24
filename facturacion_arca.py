@@ -11,8 +11,6 @@ class FacturadorARCA:
         self.mock_mode = self.config.get('mock', True)
         self.afip_instance = None
 
-        print(f"🔧 Facturador iniciado | EMPRESA={empresa_id} | MOCK={self.mock_mode}")
-
         # 🔹 AFIP REAL (solo si NO está en mock)
         if not self.mock_mode:
             try:
@@ -28,13 +26,10 @@ class FacturadorARCA:
                         'key': key,
                         'production': self.config.get('produccion', False)
                     })
-                    print("✅ AFIP REAL inicializado")
                 else:
-                    print("⚠️ Certificado o key inválidos → usando MOCK")
                     self.mock_mode = True
 
-            except Exception as e:
-                print(f"❌ Error al iniciar AFIP Real: {e}")
+            except Exception:
                 self.mock_mode = True
 
     # =========================================================
@@ -77,9 +72,6 @@ class FacturadorARCA:
     # FACTURACIÓN
     # =========================================================
     def emitir_factura_c(self, venta_id, punto_venta, dni_cliente, total):
-
-        print(f"🧾 Emitiendo factura | Venta={venta_id} | Total={total}")
-
         dni_cliente = str(dni_cliente or "0").strip()
         dni_int = int(dni_cliente) if dni_cliente.isdigit() else 0
 
@@ -87,8 +79,6 @@ class FacturadorARCA:
         # MODO MOCK / MANUAL
         # =====================================================
         if self.mock_mode or not self.afip_instance:
-            print(f"🧪 [MODO MOCK] Venta {venta_id}")
-
             cae = None
             nro_cbte = None
             res = {}
@@ -100,7 +90,6 @@ class FacturadorARCA:
                 try:
                     res = afip.facturar(conn, venta_id, total, self.empresa_id, tipo_cbte=11)
                     conn.commit()
-                    print("✅ afip.py ejecutado y commit OK")
 
                     cae = res.get('cae') if isinstance(res, dict) else None
                     nro_cbte = res.get('nro_cbte') if isinstance(res, dict) else None
@@ -109,8 +98,6 @@ class FacturadorARCA:
                     conn.close()
 
             except Exception as e:
-                print(f"⚠️ Error en afip.py → fallback automático: {e}")
-
                 res = {"error": str(e)}
                 cae = str(random.randint(10000000000000, 99999999999999))
                 nro_cbte = random.randint(1, 99999999)
@@ -130,7 +117,6 @@ class FacturadorARCA:
                 response=json.dumps(res)
             )
 
-            print(f"📦 Resultado guardado: {resultado}")
             return resultado
 
         # =====================================================
@@ -182,12 +168,9 @@ class FacturadorARCA:
                 json.dumps(res)
             )
 
-            print(f"📦 Resultado AFIP REAL: {resultado}")
             return resultado
 
         except Exception as e:
-            print(f"❌ Error AFIP REAL: {e}")
-
             return self._guardar_en_db(
                 venta_id,
                 11,
@@ -203,8 +186,6 @@ class FacturadorARCA:
     # GUARDADO DB
     # =========================================================
     def _guardar_en_db(self, venta_id, tipo, punto, nro, cae, vto, estado, response):
-        print(f"💾 Guardando comprobante en DB | venta={venta_id}")
-
         conn = get_connection()
         try:
             with conn.cursor() as cursor:
@@ -213,8 +194,8 @@ class FacturadorARCA:
                 if vto:
                     try:
                         fecha_vto = datetime.datetime.strptime(str(vto), '%Y%m%d').date()
-                    except Exception as e:
-                        print(f"⚠️ Error parseando fecha_vto: {e}")
+                    except Exception:
+                        pass
 
                 entorno_db = "PROD" if self.config.get('produccion') else "DEV"
 
@@ -237,13 +218,9 @@ class FacturadorARCA:
                     entorno_db
                 )
 
-                print(f"🧾 SQL VALUES: {valores}")
-
                 cursor.execute(sql, valores)
 
             conn.commit()
-            print("✅ INSERT OK en comprobante_afip")
-
             return {
                 'status': 'OK',
                 'cae': cae,
@@ -251,8 +228,6 @@ class FacturadorARCA:
             }
 
         except Exception as e:
-            print(f"🔥 ERROR DB: {e}")
-
             try:
                 conn.rollback()
             except:

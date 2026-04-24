@@ -229,8 +229,8 @@ class PromocionesGUI:
                 for r in cursor.fetchall():
                     foto = self.obtener_imagen_desde_ruta(r['imagen'])
                     self.tabla.insert("", tk.END, image=foto if foto else "", values=(r['id'], "MAYORISTA", f"{r['nombre']} (x{r['cantidad_minima']})", f"{r['descuento_porcentaje']}%", "ACTIVO"))
-        except Exception as e:
-            print(f"Error cargando tabla: {e}")
+        except Exception:
+            pass
         finally: conn.close()
 
 if __name__ == "__main__":

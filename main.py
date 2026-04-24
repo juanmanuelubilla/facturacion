@@ -96,8 +96,8 @@ class NexusLauncher:
                     self.lista_items = [f"{e[0]} - {e[1]}" for e in empresas]
                 self.combo_empresa['values'] = self.lista_items
                 if self.lista_items: self.combo_empresa.current(0)
-        except Exception as e: 
-            print(f"Error cargando empresas: {e}")
+        except Exception:
+            pass
         finally: 
             if 'conn' in locals() and conn: conn.close()
 
@@ -169,6 +169,7 @@ class NexusLauncher:
             self.crear_modulo(r2, "INVENTARIO", "Stock.", self.colors['inventario'], "gestion_ui.py", "📦", args)
             self.crear_modulo(r2, "FINANZAS", "Caja.", self.colors['finanzas'], "finanzas.py", "💰", args)
             self.crear_modulo(r2, "CLIENTES", "Agenda.", self.colors['clientes'], "clientes_ui.py", "👤", args)
+            self.crear_modulo(r2, "REPORTES", "Estad.", '#8e44ad', "reportes.py", "📊", args)
             self.crear_modulo(r2, "PROMOS", "Cupones.", self.colors['promo'], "promociones_ui.py", "🎟️", args)
 
         # --- FILA 3: OPERACIONES DIARIAS ---

@@ -90,17 +90,14 @@ def registrar_pago(venta_id, monto, metodo_pago, entregado, vuelto, empresa_id):
             # Si no hay cliente → consumidor final
             dni_cliente = None
 
-            resultado = facturador.emitir_factura_c(
+            facturador.emitir_factura_c(
                 venta_id=venta_id,
                 punto_venta=1,
                 dni_cliente=dni_cliente,
                 total=total
             )
-
-            print("AFIP OK:", resultado)
-
-        except Exception as e:
-            print("ERROR AFIP:", e)
+        except Exception:
+            pass
 
     finally:
         conn.close()

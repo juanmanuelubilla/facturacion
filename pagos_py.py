@@ -10,8 +10,8 @@ def obtener_config_pagos():
             # Seleccionamos la configuración de la empresa
             cursor.execute("SELECT * FROM config_pagos WHERE id=1")
             return cursor.fetchone()
-    except Exception as e:
-        print(f"Error DB: {e}")
+    except Exception:
+        pass
         return None
     finally:
         if 'conn' in locals() and conn: conn.close()
@@ -56,8 +56,8 @@ def generar_qr_payway(venta_id, total):
         if response.status_code == 200:
             return response.json().get("qr_string") 
         return None
-    except Exception as e:
-        print(f"Error Payway: {e}")
+    except Exception:
+        pass
         return None
 
 # --- LÓGICA MODO ---
@@ -82,6 +82,6 @@ def generar_qr_modo(venta_id, total):
         if response.status_code == 200:
             return response.json().get("qrData")
         return None
-    except Exception as e:
-        print(f"Error MODO: {e}")
+    except Exception:
+        pass
         return None
