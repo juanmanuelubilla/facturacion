@@ -932,12 +932,37 @@ class PromocionesGUI:
                 # Si no funciona, establecer tamaño grande
                 self.root.geometry("1600x900+0+0")
 
+def ejecutar_promociones(negocio, emp_id, usu_id):
+    """Función principal para ejecutar el módulo de promociones"""
+    try:
+        root = tk.Tk()
+        app = PromocionesGUI(root, negocio, emp_id, usu_id)
+        
+        # Manejar cierre de ventana
+        def on_closing():
+            try:
+                # Detener cualquier proceso en ejecución
+                if hasattr(app, 'panel_edicion_visible') and app.panel_edicion_visible:
+                    app.cerrar_panel_edicion()
+                root.destroy()
+            except:
+                root.destroy()
+        
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        root.mainloop()
+        
+    except KeyboardInterrupt:
+        print("\n🎟️ Módulo de promociones cerrado por el usuario")
+    except Exception as e:
+        print(f"❌ Error en módulo de promociones: {e}")
+    finally:
+        # Limpiar recursos si es necesario
+        pass
+
 if __name__ == "__main__":
     # Soporta el paso de argumentos desde el main.py
     negocio = sys.argv[1] if len(sys.argv) > 1 else "NEXUS"
     emp_id = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     usu_id = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     
-    root = tk.Tk()
-    app = PromocionesGUI(root, negocio, emp_id, usu_id)
-    root.mainloop()
+    ejecutar_promociones(negocio, emp_id, usu_id)

@@ -718,8 +718,35 @@ class GestionGUI:
             for index, (valor_ordenado, producto_item) in enumerate(productos):
                 self.tabla.move(producto_item, categoria_item, index)
 
+def ejecutar_gestion(negocio, emp_id, usu_id):
+    """Función principal para ejecutar el módulo de gestión"""
+    try:
+        root = tk.Tk()
+        app = GestionGUI(root, negocio, emp_id, usu_id)
+        
+        # Manejar cierre de ventana
+        def on_closing():
+            try:
+                # Detener cualquier proceso en ejecución
+                if hasattr(app, 'editando_producto') and app.editando_producto:
+                    app.cancelar_edicion()
+                root.destroy()
+            except:
+                root.destroy()
+        
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        root.mainloop()
+        
+    except KeyboardInterrupt:
+        print("\n📦 Módulo de gestión cerrado por el usuario")
+    except Exception as e:
+        print(f"❌ Error en módulo de gestión: {e}")
+    finally:
+        # Limpiar recursos si es necesario
+        pass
+
 if __name__ == "__main__":
     negocio = sys.argv[1] if len(sys.argv) > 1 else "NEXUS"
     emp_id = sys.argv[2] if len(sys.argv) > 2 else 1
     usu_id = sys.argv[3] if len(sys.argv) > 3 else 1
-    root = tk.Tk(); app = GestionGUI(root, negocio, emp_id, usu_id); root.mainloop()
+    ejecutar_gestion(negocio, emp_id, usu_id)

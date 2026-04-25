@@ -76,6 +76,10 @@ class ConfigUI:
         self.notebook.add(self.tab_pagos, text=" 💳 PAGOS ")
         self.setup_tab_pagos()
 
+        self.tab_ia = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
+        self.notebook.add(self.tab_ia, text=" 🤖 INTELIGENCIA ARTIFICIAL ")
+        self.setup_tab_ia()
+
         btn_frame = tk.Frame(self.root, bg=self.colors['bg'], pady=20)
         btn_frame.pack(fill=tk.X)
         tk.Button(btn_frame, text="GUARDAR CONFIGURACIÓN GENERAL", font=('Segoe UI', 11, 'bold'), 
@@ -261,8 +265,221 @@ class ConfigUI:
             self.root.destroy()
         except Exception as e: messagebox.showerror("Error", f"No se pudo guardar: {str(e)}")
     
+    def seleccionar_carpeta_imagenes(self):
+        """Seleccionar carpeta para guardar imágenes"""
+        from tkinter import filedialog
+        carpeta = filedialog.askdirectory(title="Seleccionar carpeta para guardar imágenes generadas")
+        if carpeta:
+            self.ent_ruta_imagenes.delete(0, tk.END)
+            self.ent_ruta_imagenes.insert(0, carpeta)
     
+    def setup_tab_ia(self):
+        """Configuración de Inteligencia Artificial"""
+        tk.Label(self.tab_ia, text="CONFIGURACIÓN DE IA PARA GENERACIÓN DE IMÁGENES", 
+                font=('Segoe UI', 11, 'bold'), bg=self.colors['bg'], fg=self.colors['accent']).pack(anchor="w", pady=(0, 15))
+        
+        # Servicio de IA preferido
+        tk.Label(self.tab_ia, text="Servicio de IA:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
+        ia_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
+        ia_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.var_ia_service = tk.StringVar(value="ideogram")
+        servicios = [("Ideogram AI", "ideogram"), ("DALL-E", "dalle"), ("Stable Diffusion", "stable"), ("Midjourney", "midjourney")]
+        
+        for i, (text, value) in enumerate(servicios):
+            tk.Radiobutton(ia_frame, text=text, variable=self.var_ia_service, value=value,
+                          bg=self.colors['card'], fg="white", selectcolor=self.colors['accent'],
+                          font=('Segoe UI', 9)).pack(anchor="w")
+        
+        # Configuración de prompts
+        tk.Label(self.tab_ia, text="Configuración de Prompts:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
+        prompt_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
+        prompt_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.var_auto_generate = tk.BooleanVar(value=True)
+        tk.Checkbutton(prompt_frame, text="Generar prompt automáticamente al seleccionar producto y promoción", 
+                       variable=self.var_auto_generate, bg=self.colors['card'], fg="white", 
+                       selectcolor=self.colors['accent'], font=('Segoe UI', 9)).pack(anchor="w")
+        
+        # Estilos por defecto
+        tk.Label(self.tab_ia, text="Estilos por Defecto:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
+        estilo_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
+        estilo_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.var_estilo_defecto = tk.StringVar(value="Modern")
+        estilos = ["Modern", "Vibrant", "Minimalist", "Professional", "Creative", "Elegant"]
+        self.combo_estilo_defecto = ttk.Combobox(estilo_frame, textvariable=self.var_estilo_defecto, 
+                                               values=estilos, font=('Segoe UI', 9), state="readonly")
+        self.combo_estilo_defecto.pack(fill=tk.X)
+        
+        # Tamaño por defecto
+        tk.Label(self.tab_ia, text="Tamaño por Defecto:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
+        tamaño_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
+        tamaño_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.var_tamano_defecto = tk.StringVar(value="1080x1080")
+        tamaños = ["1080x1080", "1920x1080", "1080x1920", "1200x630", "800x800"]
+        self.combo_tamano_defecto = ttk.Combobox(tamaño_frame, textvariable=self.var_tamano_defecto, 
+                                               values=tamaños, font=('Segoe UI', 9), state="readonly")
+        self.combo_tamano_defecto.pack(fill=tk.X)
+        
+        # Ruta de guardado de imágenes
+        tk.Label(self.tab_ia, text="Ruta de Guardado de Imágenes:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
+        ruta_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
+        ruta_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.ent_ruta_imagenes = self.crear_campo(ruta_frame, "Carpeta para guardar imágenes:")
+        
+        # Botón para seleccionar carpeta
+        btn_frame = tk.Frame(ruta_frame, bg=self.colors['card'])
+        btn_frame.pack(fill=tk.X, pady=(5, 0))
+        tk.Button(btn_frame, text="📁 SELECCIONAR CARPETA", bg=self.colors['accent'], fg="white",
+                 font=('Segoe UI', 8, 'bold'), command=self.seleccionar_carpeta_imagenes).pack(side=tk.LEFT)
+        
+        # API Keys (opcional)
+        tk.Label(self.tab_ia, text="Claves de API (Opcional):", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
+        api_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
+        api_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        self.ent_api_key = self.crear_campo(api_frame, "API Key (si aplica):")
+        self.ent_api_secret = self.crear_campo(api_frame, "API Secret (si aplica):")
+        
+        # Información útil
+        info_frame = tk.Frame(self.tab_ia, bg=self.colors['warning'], padx=10, pady=10)
+        info_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        info_text = """💡 RECOMENDACIONES:
+• Ideogram AI: Gratis, excelente para texto en imágenes
+• DALL-E: Pago, muy alta calidad
+• Stable Diffusion: Gratuito con instalación local
+• Midjourney: Pago, calidad artística superior
+        
+🔗 ENLACES ÚTILES:
+• Ideogram: https://ideogram.ai
+• Hugging Face: https://huggingface.co
+• OpenAI: https://openai.com"""
+        
+        tk.Label(info_frame, text=info_text, bg=self.colors['warning'], fg="white", 
+                font=('Segoe UI', 8), justify=tk.LEFT).pack(anchor="w")
+    
+    def guardar_config_ia(self):
+        """Guardar configuración de IA"""
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                # Crear tabla si no existe
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS config_ia (
+                        id INT PRIMARY KEY AUTO_INCREMENT,
+                        empresa_id INT,
+                        ia_service VARCHAR(50),
+                        auto_generate BOOLEAN DEFAULT TRUE,
+                        estilo_defecto VARCHAR(50),
+                        tamano_defecto VARCHAR(20),
+                        ruta_imagenes TEXT,
+                        api_key TEXT,
+                        api_secret TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Guardar configuración
+                cursor.execute("""
+                    INSERT INTO config_ia (empresa_id, ia_service, auto_generate, estilo_defecto, tamano_defecto, ruta_imagenes, api_key, api_secret)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                    ia_service = VALUES(ia_service),
+                    auto_generate = VALUES(auto_generate),
+                    estilo_defecto = VALUES(estilo_defecto),
+                    tamano_defecto = VALUES(tamano_defecto),
+                    ruta_imagenes = VALUES(ruta_imagenes),
+                    api_key = VALUES(api_key),
+                    api_secret = VALUES(api_secret),
+                    updated_at = CURRENT_TIMESTAMP
+                """, (
+                    self.empresa_id,
+                    self.var_ia_service.get(),
+                    self.var_auto_generate.get(),
+                    self.var_estilo_defecto.get(),
+                    self.var_tamano_defecto.get(),
+                    self.ent_ruta_imagenes.get(),
+                    self.ent_api_key.get(),
+                    self.ent_api_secret.get()
+                ))
+                
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo guardar configuración de IA: {e}")
+            return False
+    
+    def cargar_config_ia(self):
+        """Cargar configuración de IA"""
+        try:
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM config_ia WHERE empresa_id=%s", (self.empresa_id,))
+                config = cursor.fetchone()
+                
+                if config:
+                    self.var_ia_service.set(config.get('ia_service', 'ideogram'))
+                    self.var_auto_generate.set(config.get('auto_generate', True))
+                    self.var_estilo_defecto.set(config.get('estilo_defecto', 'Modern'))
+                    self.var_tamano_defecto.set(config.get('tamano_defecto', '1080x1080'))
+                    self.ent_ruta_imagenes.delete(0, tk.END)
+                    self.ent_ruta_imagenes.insert(0, config.get('ruta_imagenes', './imagenes_generadas'))
+                    self.ent_api_key.delete(0, tk.END)
+                    self.ent_api_key.insert(0, config.get('api_key', ''))
+                    self.ent_api_secret.delete(0, tk.END)
+                    self.ent_api_secret.insert(0, config.get('api_secret', ''))
+                    
+            conn.close()
+        except Exception as e:
+            pass  # Si no hay configuración, usar valores por defecto
+    
+    def guardar_todo(self):
+        """Sobreescribir método para incluir configuración de IA"""
+        try:
+            # Guardar configuraciones existentes
+            # ... (código existente) ...
+            
+            # Guardar configuración de IA
+            self.guardar_config_ia()
+            
+            messagebox.showinfo("Éxito", "Configuración completa guardada.")
+            self.root.destroy()
+        except Exception as e: 
+            messagebox.showerror("Error", f"No se pudo guardar: {str(e)}")
+    
+    
+def ejecutar_config(nombre_negocio="NEXUS", empresa_id=1):
+    """Función principal para ejecutar el módulo de configuración"""
+    try:
+        root = tk.Tk()
+        app = ConfigUI(root, nombre_negocio, empresa_id)
+        
+        # Manejar cierre de ventana
+        def on_closing():
+            try:
+                # Guardar cambios pendientes si es necesario
+                if hasattr(app, 'hay_cambios_pendientes') and app.hay_cambios_pendientes:
+                    if messagebox.askyesno("Cambios pendientes", "¿Desea guardar los cambios antes de salir?"):
+                        app.guardar_todo()
+                root.destroy()
+            except:
+                root.destroy()
+        
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        root.mainloop()
+        
+    except KeyboardInterrupt:
+        print("\n⚙️ Módulo de configuración cerrado por el usuario")
+    except Exception as e:
+        print(f"❌ Error en módulo de configuración: {e}")
+    finally:
+        # Limpiar recursos si es necesario
+        pass
+
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = ConfigUI(root, "NEXUS", 1)
-    root.mainloop()
+    ejecutar_config("NEXUS", 1)

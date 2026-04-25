@@ -1,0 +1,180 @@
+================================================================================
+                    REQUISITOS DLNA PARA SISTEMA DE BANNERS NEXUS
+================================================================================
+
+📋 DESCRIPCIÓN:
+Este documento detalla los requisitos necesarios para configurar el servidor DLNA
+que permite mostrar los banners promocionales en televisores y dispositivos compatibles.
+
+🎯 OBJETIVO:
+- Compartir imágenes de banners en la red local
+- Visualizar banners automáticamente en Smart TVs
+- Ciclo de visualización controlado por tiempo
+
+📦 REQUISITOS COMPLETOS DEL SISTEMA:
+
+SOLO PARA LINUX (Raspberry Pi / Debian / Ubuntu / Mint):
+
+1️⃣ PAQUETES DEL SISTEMA:
+   - minidlna (servidor DLNA principal)
+   - ffmpeg (procesamiento de medios)
+   - imagemagick (manipulación de imágenes)
+   - python3 (intérprete Python)
+   - python3-pip (gestor de paquetes Python)
+   - python3-dev (headers para desarrollo Python)
+   - python3-tk (interfaz gráfica tkinter)
+   - mysql-server (base de datos)
+   - mysql-client (cliente MySQL)
+
+2️⃣ PAQUETES PYTHON ESENCIALES PARA NEXUS:
+   - Pillow (procesamiento de imágenes)
+   - requests (peticiones HTTP)
+   - mysql-connector-python (conexión MySQL)
+   - dlna (servidor DLNA Python)
+   - flask (servidor web)
+   - python-dateutil (manejo de fechas)
+   - numpy (cálculos numéricos)
+   - matplotlib (gráficos)
+   - reportlab (generación PDF)
+   - openpyxl (archivos Excel)
+   - pandas (análisis de datos)
+   - beautifulsoup4 (web scraping)
+   - PyQt5 (interfaz gráfica alternativa)
+   - cryptography (encriptación)
+   - pillow-heif (formatos de imagen modernos)
+   - imageio (procesamiento de imágenes)
+   - scikit-image (procesamiento avanzado de imágenes)
+
+🔧 COMANDOS DE INSTALACIÓN MANUAL:
+
+PARA INSTALAR TODO EL SISTEMA NEXUS + DLNA (RECOMENDADO):
+-------------------------------------------------------
+sudo apt update
+sudo apt install -y minidlna ffmpeg imagemagick python3 python3-pip python3-dev python3-tk mysql-server mysql-client
+
+PARA INSTALAR PAQUETES PYTHON COMPLETOS:
+---------------------------------------
+pip3 install --user Pillow requests mysql-connector-python dlna flask python-dateutil numpy matplotlib reportlab openpyxl pandas beautifulsoup4 PyQt5 cryptography pillow-heif imageio scikit-image
+
+PARA INSTALACIÓN RÁPIDA (SOLO DLNA):
+----------------------------------
+sudo apt update
+sudo apt install minidlna ffmpeg imagemagick -y
+pip3 install --user dlna flask pillow
+
+⚙️ CONFIGURACIÓN REQUERIDA:
+
+1. Crear directorio para banners:
+   sudo mkdir -p /var/lib/minidlna/banners
+   sudo chown $USER:$USER /var/lib/minidlna/banners
+
+2. Configurar minidlna:
+   sudo nano /etc/minidlna.conf
+
+3. Agregar al archivo de configuración:
+   media_dir=/var/lib/minidlna/banners
+   friendly_name=NEXUS_Banners
+   network_interface=eth0
+   inotify=yes
+   log_dir=/var/log/minidlna
+
+4. Iniciar y habilitar servicio:
+   sudo systemctl start minidlna
+   sudo systemctl enable minidlna
+   sudo systemctl status minidlna
+
+📺 DISPOSITIVOS COMPATIBLES:
+
+✅ SMART TVS:
+   - Samsung Smart TV (2010+)
+   - LG Smart TV (2010+)
+   - Sony Bravia (2010+)
+   - Philips Smart TV
+   - TCL Smart TV
+
+✅ OTROS DISPOSITIVOS:
+   - Chromecast (con apps como BubbleUPnP)
+   - Roku
+   - Amazon Fire TV
+   - Apple TV (con apps de terceros)
+   - Reproductores Blu-ray con DLNA
+   - Consolas de videojuegos (PS4/PS5, Xbox)
+
+✅ SOFTWARE:
+   - VLC Media Player
+   - BubbleUPnP
+   - Kodi
+   - Plex
+
+🌐 CONFIGURACIÓN DE RED:
+
+REQUISITOS DE RED:
+- Router con DHCP habilitado
+- Dispositivos en la misma red local
+- Puerto 1900 UDP abierto (DLNA)
+- Puerto 8200 TCP abierto (miniDLNA)
+
+DETALLES DE PUERTOS:
+- 1900 UDP: Descubrimiento de dispositivos DLNA
+- 8200 TCP: Servidor miniDLNA
+- 5000 TCP: Alternativa Python
+
+🚀 PASOS POST-INSTALACIÓN:
+
+1. VERIFICAR INSTALACIÓN:
+   sudo systemctl status minidlna
+
+2. REVISAR LOGS:
+   sudo tail -f /var/log/minidlna.log
+
+3. PROBAR ACCESO:
+   # Deberías ver "NEXUS_Banners" en tu TV
+
+4. CONFIGURAR EN TV:
+   - Ir a Apps > Media Server > DLNA
+   - Buscar "NEXUS_Banners"
+   - Seleccionar y visualizar banners
+
+🔧 SOLUCIÓN DE PROBLEMAS:
+
+❌ SI NO APARECE EN LA TV:
+   - Verificar que minidlna esté corriendo
+   - Revisar configuración de red
+   - Reiniciar el servicio: sudo systemctl restart minidlna
+   - Verificar firewall
+
+❌ SI LAS IMÁGENES NO SE VEN:
+   - Verificar permisos del directorio
+   - Revisar formato de imágenes (PNG/JPG)
+   - Revisar logs para errores
+
+❌ SI EL SERVICIO NO INICIA:
+   - Verificar configuración en /etc/minidlna.conf
+   - Revisar logs del sistema
+   - Reinstalar: sudo apt install --reinstall minidlna
+
+📁 ESTRUCTURA DE ARCHIVOS:
+
+/var/lib/minidlna/banners/
+├── promo_coca_cola_20240425_183045.png
+├── promo_pepsi_20240425_184020.png
+├── combo_hamburguesa_20240425_185000.png
+└── mayorista_pizza_20240425_185500.jpg
+
+🔄 INTEGRACIÓN CON NEXUS:
+
+El sistema de banners de NEXUS automáticamente:
+1. Genera imágenes con el generador IA
+2. Las copia al directorio de DLNA
+3. Las muestra en ciclos según tiempo configurado
+4. Actualiza automáticamente cuando agregas nuevos banners
+
+📞 SOPORTE Y AYUDA:
+
+- Revisar logs: /var/log/minidlna.log
+- Documentación oficial: https://sourceforge.net/projects/minidlna/
+- Foro de soporte: https://github.com/gerbera/gerbera
+
+================================================================================
+FIN DEL DOCUMENTO - REQUISITOS DLNA NEXUS
+================================================================================

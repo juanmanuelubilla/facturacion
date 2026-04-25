@@ -623,8 +623,32 @@ class ClientesUI:
         self.limpiar_preview(self.foto_preview_label)
         self.limpiar_preview(self.foto_opcional_preview_label)
 
+def ejecutar_clientes(nombre_negocio="NEXUS", empresa_id=1):
+    """Función principal para ejecutar el módulo de clientes"""
+    try:
+        root = tk.Tk()
+        app = ClientesUI(root, nombre_negocio, empresa_id)
+        
+        # Manejar cierre de ventana
+        def on_closing():
+            try:
+                # Cancelar edición si está en curso
+                if hasattr(app, 'editando_cliente') and app.editando_cliente:
+                    app.cancelar_edicion()
+                root.destroy()
+            except:
+                root.destroy()
+        
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        root.mainloop()
+        
+    except KeyboardInterrupt:
+        print("\n👤 Módulo de clientes cerrado por el usuario")
+    except Exception as e:
+        print(f"❌ Error en módulo de clientes: {e}")
+    finally:
+        # Limpiar recursos si es necesario
+        pass
+
 if __name__ == "__main__":
-    root = tk.Tk()
-    # Para probar con la empresa 1
-    app = ClientesUI(root, "NEXUS", 1)
-    root.mainloop()
+    ejecutar_clientes("NEXUS", 1)

@@ -4,6 +4,7 @@ import subprocess
 import os
 import hashlib
 import sys
+from datetime import datetime
 from db import get_connection
 
 class NexusLauncher:
@@ -175,6 +176,8 @@ class NexusLauncher:
             self.crear_modulo(r2, "CLIENTES", "Agenda.", self.colors['clientes'], "clientes_ui.py", "👤", args)
             self.crear_modulo(r2, "REPORTES", "Estad.", '#8e44ad', "reportes.py", "📊", args)
             self.crear_modulo(r2, "PROMOS", "Cupones.", self.colors['promo'], "promociones_ui.py", "🎟️", args)
+            self.crear_modulo(r2, "IMÁGENES IA", "Generador.", '#e74c3c', "generador_imagenes_ui.py", "🎨", args)
+            self.crear_modulo(r2, "BANNERS", "DLNA TV.", '#8e44ad', "banners_ui.py", "🖼️", args)
 
         # --- FILA 3: OPERACIONES DIARIAS ---
         tk.Label(container, text="── OPERACIONES DIARIAS ──", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], fg=self.colors['ventas']).pack(pady=(0, 5))
@@ -210,17 +213,52 @@ class NexusLauncher:
         if os.path.exists(archivo):
             self.root.withdraw()
             try:
-                cmd = [sys.executable, archivo, self.config.get('nombre', 'NEXUS')]
-                if extra_arg: cmd.extend(extra_arg.split())
-                subprocess.run(cmd)
+                if archivo == "generador_imagenes_ui.py":
+                    # Manejo especial para el generador de imágenes
+                    from generador_imagenes_ui import ejecutar_generador_imagenes
+                    ejecutar_generador_imagenes(self.empresa_seleccionada_id, self.config.get('nombre', 'NEXUS'))
+                elif archivo == "banners_ui.py":
+                    # Manejo especial para el módulo de banners
+                    from banners_ui import ejecutar_banners
+                    ejecutar_banners(self.empresa_seleccionada_id, self.config.get('nombre', 'NEXUS'))
+                else:
+                    # Manejo normal para otros scripts
+                    cmd = [sys.executable, archivo, self.config.get('nombre', 'NEXUS')]
+                    if extra_arg: cmd.extend(extra_arg.split())
+                    subprocess.run(cmd)
             except Exception as e: 
                 messagebox.showerror("Error", str(e))
             finally:
-                self.config = self.obtener_config_db(self.empresa_seleccionada_id)
-                self.create_widgets()
-                self.root.deiconify()
+                # Optimización: recargar dashboard de forma asíncrona inmediata
+                self.root.after(10, self.recargar_dashboard_async)
         else: 
             messagebox.showerror("Error", f"Falta el archivo: {archivo}")
+    
+    def recargar_dashboard_async(self):
+        """Recargar dashboard de forma optimizada"""
+        try:
+            # Cache de configuración más agresivo - solo actualizar cada 10 minutos
+            if not hasattr(self, '_last_config_update') or \
+               (datetime.now() - self._last_config_update).total_seconds() > 600:  # 10 minutos
+                self.config = self.obtener_config_db(self.empresa_seleccionada_id)
+                self._last_config_update = datetime.now()
+            
+            # Limpiar widgets de forma eficiente
+            for widget in self.root.winfo_children():
+                widget.destroy()
+            
+            # Recrear widgets (necesario para actualizar estado)
+            self.create_widgets()
+            
+            # Mostrar ventana
+            self.root.deiconify()
+            
+            # Forzar actualización inmediata
+            self.root.update_idletasks()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo recargar el dashboard: {e}")
+            self.root.deiconify()
 
     def run(self):
         self.root.mainloop()

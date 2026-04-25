@@ -1597,7 +1597,35 @@ class POSApp:
         except Exception as e:
             print(f"Error al cargar productos en tabla: {e}")
 
+def ejecutar_ventas(nombre_negocio="NEXUS", empresa_id=1, usuario_id=1):
+    """Función principal para ejecutar el módulo de ventas (POS)"""
+    try:
+        root = tk.Tk()
+        app = POSApp(root, nombre_negocio, empresa_id, usuario_id)
+        
+        # Manejar cierre de ventana
+        def on_closing():
+            try:
+                # Verificar si hay una venta en curso
+                if hasattr(app, 'venta_en_curso') and app.venta_en_curso:
+                    if messagebox.askyesno("Venta en curso", "¿Desea cancelar la venta actual y salir?"):
+                        app.cancelar_venta()
+                        root.destroy()
+                else:
+                    root.destroy()
+            except:
+                root.destroy()
+        
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        root.mainloop()
+        
+    except KeyboardInterrupt:
+        print("\n🛒 Módulo de ventas cerrado por el usuario")
+    except Exception as e:
+        print(f"❌ Error en módulo de ventas: {e}")
+    finally:
+        # Limpiar recursos si es necesario
+        pass
+
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = POSApp(root, "NEXUS", 1, 1)
-    root.mainloop()
+    ejecutar_ventas("NEXUS", 1, 1)
