@@ -57,7 +57,9 @@ class POSApp:
             self.facturador = None
         
         self.root.title(f"{self.nombre_negocio} - Terminal POS")
-        self.root.geometry("1450x900")
+        # Maximizar ventana con múltiples intentos y más tiempo
+        self.root.after(500, self.maximizar_ventana)
+        self.root.after(1000, self.maximizar_ventana)  # Segundo intento
         
         self.colors = {
             'bg_main': '#121212', 'bg_panel': '#1e1e1e', 'accent': '#00a8ff',       
@@ -78,6 +80,7 @@ class POSApp:
         self.setup_styles()
         self.create_widgets()
         self.nueva_venta()                  
+        self.cargar_filtros()
         self.cargar_productos_stock() 
         self.setup_keyboard_bindings()
         self.input_codigo.focus()
@@ -386,24 +389,9 @@ class POSApp:
     def cargar_productos_stock(self):
         """Carga los productos en la tabla de productos"""
         try:
+            from productos import obtener_productos
             productos = obtener_productos(self.empresa_id)
-            
-            # Limpiar tabla actual
-            for item in self.tabla.get_children():
-                self.tabla.delete(item)
-            
-            # Cargar productos
-            for p in productos:
-                # --- FILTRO DE STOCK: OCULTAR SI ES 0 O MENOR ---
-                stock_actual = float(p.get("stock", 0))
-                if stock_actual <= 0:
-                    continue
-                    
-                icono = self.obtener_icono(p.get("imagen"))
-                precio_p = float(p['precio']) if p['precio'] else 0.0
-                es_pesable = self._db_flag_activo(p.get('venta_por_peso', False))
-                stock_txt = self._fmt_stock(p.get("stock", 0), es_pesable)
-                self.tabla.insert("", tk.END, image=icono if icono else "", values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", stock_txt))
+            self.cargar_productos_en_tabla(productos)
         except Exception as e:
             print(f"Error al cargar productos: {e}")
             messagebox.showerror("Error", f"Error al cargar productos: {e}")
@@ -494,12 +482,62 @@ class POSApp:
         
         cat_frame = tk.Frame(content, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1)
         cat_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        self.tabla = ttk.Treeview(cat_frame, columns=("SKU", "Nombre", "Precio", "Stock"), show="tree headings", style="Custom.Treeview")
+        
+        # --- PANEL DE FILTROS ---
+        filtros_frame = tk.Frame(cat_frame, bg=self.colors['bg_panel'], pady=10)
+        filtros_frame.pack(fill=tk.X, padx=10)
+        
+        tk.Label(filtros_frame, text="FILTROS:", font=('Segoe UI', 10, 'bold'), 
+                bg=self.colors['bg_panel'], fg=self.colors['accent']).pack(anchor="w")
+        
+        # Frame para filtros
+        filtros_contenido = tk.Frame(filtros_frame, bg=self.colors['bg_panel'])
+        filtros_contenido.pack(fill=tk.X, pady=5)
+        
+        # Filtro por categoría
+        cat_filtro_frame = tk.Frame(filtros_contenido, bg=self.colors['bg_panel'])
+        cat_filtro_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        tk.Label(cat_filtro_frame, text="Categoría:", font=('Segoe UI', 8), 
+                bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        
+        self.combo_filtro_categoria = ttk.Combobox(cat_filtro_frame, values=["Todas"], state="readonly", 
+                                                   font=('Segoe UI', 9), width=20)
+        self.combo_filtro_categoria.pack(fill=tk.X)
+        self.combo_filtro_categoria.set("Todas")
+        self.combo_filtro_categoria.bind("<<ComboboxSelected>>", self.filtrar_productos)
+        
+        # Filtro por tags
+        tag_filtro_frame = tk.Frame(filtros_contenido, bg=self.colors['bg_panel'])
+        tag_filtro_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+        
+        tk.Label(tag_filtro_frame, text="Tags:", font=('Segoe UI', 8), 
+                bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        
+        self.combo_filtro_tag = ttk.Combobox(tag_filtro_frame, values=["Todos"], state="readonly", 
+                                            font=('Segoe UI', 9), width=20)
+        self.combo_filtro_tag.pack(fill=tk.X)
+        self.combo_filtro_tag.set("Todos")
+        self.combo_filtro_tag.bind("<<ComboboxSelected>>", self.filtrar_productos)
+        
+        # Botón para limpiar filtros
+        btn_limpiar_frame = tk.Frame(filtros_contenido, bg=self.colors['bg_panel'])
+        btn_limpiar_frame.pack(side=tk.LEFT, padx=(5, 0))
+        
+        tk.Button(btn_limpiar_frame, text="LIMPIAR", bg=self.colors['warning'], fg="white", 
+                 font=('Segoe UI', 8, 'bold'), command=self.limpiar_filtros, 
+                 width=8).pack(pady=(15, 0))
+        
+        # Separador
+        tk.Frame(cat_frame, height=2, bg=self.colors['border']).pack(fill=tk.X, pady=5)
+        
+        self.tabla = ttk.Treeview(cat_frame, columns=("SKU", "Nombre", "Precio", "Stock", "Categoría"), show="tree headings", style="Custom.Treeview")
         self.tabla.heading("#0", text="IMG"); self.tabla.column("#0", width=60)
-        self.tabla.heading("SKU", text="SKU"); self.tabla.column("SKU", width=100)
-        self.tabla.heading("Nombre", text="PRODUCTO"); self.tabla.column("Nombre", width=250)
-        self.tabla.heading("Precio", text="PRECIO"); self.tabla.column("Precio", width=100)
-        self.tabla.heading("Stock", text="STOCK"); self.tabla.column("Stock", width=80)
+        self.tabla.heading("SKU", text="SKU"); self.tabla.column("SKU", width=90)
+        self.tabla.heading("Nombre", text="PRODUCTO"); self.tabla.column("Nombre", width=200)
+        self.tabla.heading("Precio", text="PRECIO"); self.tabla.column("Precio", width=90)
+        self.tabla.heading("Stock", text="STOCK"); self.tabla.column("Stock", width=70)
+        self.tabla.heading("Categoría", text="CATEGORÍA"); self.tabla.column("Categoría", width=100)
         self.tabla.pack(fill=tk.BOTH, expand=True)
         
         # --- DOBLE CLIC PARA AGREGAR PRODUCTO ---
@@ -539,12 +577,20 @@ class POSApp:
         self.crear_boton(btn_container, "PANTALLA CLIENTE (F8)", "#2d8cff", self.toggle_pantalla_cliente)
         self.crear_boton(btn_container, "SALIR (ESC)", "#444", self.confirm_exit)
 
+    def maximizar_ventana(self):
+        """Intenta maximizar la ventana con múltiples métodos"""
+        try:
+            self.root.state('zoomed')
+        except:
+            try:
+                self.root.attributes('-zoomed', True)
+            except:
+                # Si no funciona, establecer tamaño grande
+                self.root.geometry("1600x900+0+0")
+
     def crear_boton(self, master, texto, color, comando):
-        # Botón más grande y visible para búsqueda de cliente
-        if "BUSCAR CLIENTE" in texto:
-            btn = tk.Button(master, text=texto, bg=color, fg="white", font=('Segoe UI', 10, 'bold'), relief="flat", padx=20, pady=12, command=comando, cursor="hand2")
-        else:
-            btn = tk.Button(master, text=texto, bg=color, fg="white", font=('Segoe UI', 9, 'bold'), relief="flat", padx=15, pady=10, command=comando, cursor="hand2")
+        # Botones con el mismo tamaño que en main.py
+        btn = tk.Button(master, text=texto, bg=color, fg="white", font=('Segoe UI', 8, 'bold'), relief="flat", padx=20, pady=8, command=comando, cursor="hand2")
         btn.pack(side=tk.LEFT, padx=3)
         return btn
 
@@ -1169,14 +1215,18 @@ class POSApp:
         self._actualizar_pantalla_cliente()
 
     def obtener_icono(self, ruta):
-        if not ruta or not os.path.exists(ruta): return None
-        if ruta in self.imagenes_cache: return self.imagenes_cache[ruta]
+        if not ruta or not os.path.exists(ruta):
+            return None
+        if ruta in self.imagenes_cache:
+            return self.imagenes_cache[ruta]
         try:
             img = Image.open(ruta).resize((32, 32), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.imagenes_cache[ruta] = photo
             return photo
-        except: return None
+        except Exception as e:
+            print(f"Error cargando imagen {ruta}: {e}")
+            return None
 
     def procesar_pago(self, metodo):
         if not self.items: return
@@ -1447,9 +1497,105 @@ class POSApp:
         self.root.bind('<Escape>', lambda e: self.confirm_exit())
 
     def confirm_exit(self):
-        if messagebox.askyesno("Salir", "¿Cerrar terminal de ventas?"):
-            self.cerrar_pantalla_cliente()
+        if messagebox.askyesno("Salir", "¿Cerrar el terminal POS?"):
             self.root.destroy()
+
+    def cargar_filtros(self):
+        """Carga las categorías y tags disponibles en los filtros"""
+        try:
+            # Importar funciones de productos
+            from productos import obtener_categorias, obtener_tags_unicos
+            
+            # Cargar categorías
+            categorias = obtener_categorias(self.empresa_id)
+            cat_values = ["Todas"] + [f"{cat['id']} - {cat['nombre']}" for cat in categorias]
+            self.combo_filtro_categoria['values'] = cat_values
+            self.categorias_datos = {"Todas": None}
+            for cat in categorias:
+                self.categorias_datos[f"{cat['id']} - {cat['nombre']}"] = cat['id']
+            
+            # Cargar tags
+            tags = obtener_tags_unicos(self.empresa_id)
+            tag_values = ["Todos"] + tags
+            self.combo_filtro_tag['values'] = tag_values
+            
+        except Exception as e:
+            print(f"Error cargando filtros: {e}")
+
+    def filtrar_productos(self, event=None):
+        """Filtra los productos según categoría y tag seleccionados"""
+        try:
+            categoria_sel = self.combo_filtro_categoria.get()
+            tag_sel = self.combo_filtro_tag.get()
+            
+            # Limpiar tabla
+            for item in self.tabla.get_children():
+                self.tabla.delete(item)
+            
+            # Determinar qué productos cargar
+            if categoria_sel != "Todas" and tag_sel != "Todos":
+                # Filtrar por ambos
+                categoria_id = self.categorias_datos[categoria_sel]
+                from productos import buscar_productos_por_categoria, buscar_productos_por_tag
+                productos_cat = buscar_productos_por_categoria(categoria_id, self.empresa_id)
+                productos_tag = buscar_productos_por_tag(tag_sel, self.empresa_id)
+                
+                # Productos que cumplen ambos filtros
+                ids_tag = {p['id'] for p in productos_tag}
+                productos_filtrados = [p for p in productos_cat if p['id'] in ids_tag]
+                
+            elif categoria_sel != "Todas":
+                # Filtrar solo por categoría
+                categoria_id = self.categorias_datos[categoria_sel]
+                from productos import buscar_productos_por_categoria
+                productos_filtrados = buscar_productos_por_categoria(categoria_id, self.empresa_id)
+                
+            elif tag_sel != "Todos":
+                # Filtrar solo por tag
+                from productos import buscar_productos_por_tag
+                productos_filtrados = buscar_productos_por_tag(tag_sel, self.empresa_id)
+                
+            else:
+                # Mostrar todos los productos
+                from productos import obtener_productos
+                productos_filtrados = obtener_productos(self.empresa_id)
+            
+            # Cargar productos filtrados en la tabla
+            self.cargar_productos_en_tabla(productos_filtrados)
+            
+        except Exception as e:
+            print(f"Error filtrando productos: {e}")
+
+    def limpiar_filtros(self):
+        """Limpia todos los filtros y muestra todos los productos"""
+        self.combo_filtro_categoria.set("Todas")
+        self.combo_filtro_tag.set("Todos")
+        self.cargar_productos_stock()
+
+    def cargar_productos_en_tabla(self, productos):
+        """Carga una lista específica de productos en la tabla"""
+        try:
+            # Limpiar tabla actual
+            for item in self.tabla.get_children():
+                self.tabla.delete(item)
+            
+            # Cargar productos
+            for p in productos:
+                # --- FILTRO DE STOCK: OCULTAR SI ES 0 O MENOR ---
+                stock_actual = float(p.get("stock", 0))
+                if stock_actual <= 0:
+                    continue
+                    
+                icono = self.obtener_icono(p.get("imagen"))
+                precio_p = float(p['precio']) if p['precio'] else 0.0
+                es_pesable = self._db_flag_activo(p.get('venta_por_peso', False))
+                stock_txt = self._fmt_stock(p.get("stock", 0), es_pesable)
+                categoria_nombre = p.get("categoria_nombre", "Sin categoría")
+                
+                self.tabla.insert("", tk.END, image=icono if icono else "", 
+                                values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", stock_txt, categoria_nombre))
+        except Exception as e:
+            print(f"Error al cargar productos en tabla: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()

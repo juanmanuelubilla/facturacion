@@ -16,7 +16,9 @@ class PromocionesGUI:
         self.empresa_id = int(empresa_id) # <--- Inyectado para multiempresa
         self.usuario_id = int(usuario_id)
         self.root.title(f"{nombre_negocio.upper()} - Centro de Promociones")
-        self.root.geometry("1400x850")
+        # Maximizar ventana con múltiples intentos
+        self.root.after(500, self.maximizar_ventana)
+        self.root.after(1000, self.maximizar_ventana)  # Segundo intento
         
         self.colors = {
             'bg_main': '#121212', 'bg_panel': '#1e1e1e', 'accent': '#f1c40f',
@@ -76,18 +78,54 @@ class PromocionesGUI:
         body = tk.Frame(main_container, bg=self.colors['bg_main'])
         body.pack(fill=tk.BOTH, expand=True)
 
-        # TABLA
-        self.tabla = ttk.Treeview(body, columns=("ID", "Tipo", "Detalle", "Desc", "Estado"), show='tree headings', style="Custom.Treeview")
+        # PANELES VERTICALES: IZQUIERDA (TABLA) | DERECHA (FORMULARIOS)
+        
+        # PANEL IZQUIERDO - TABLA DE PROMOCIONES
+        left_panel = tk.Frame(body, bg=self.colors['bg_main'])
+        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # TABLA CON SCROLL VERTICAL
+        self.cols = ("ID", "Tipo", "Detalle", "Desc", "Estado")
+        
+        # Frame contenedor para la tabla y scrollbar vertical
+        tabla_container = tk.Frame(left_panel, bg=self.colors['bg_main'])
+        tabla_container.pack(fill=tk.BOTH, expand=True)
+        
+        # Scrollbar vertical
+        tree_scroll_y = ttk.Scrollbar(tabla_container, orient="vertical")
+        tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Tabla con scroll vertical
+        self.tabla = ttk.Treeview(tabla_container, columns=self.cols, show='tree headings', 
+                                 style="Custom.Treeview", yscrollcommand=tree_scroll_y.set)
+        
+        # Configurar scrollbar vertical
+        tree_scroll_y.config(command=self.tabla.yview)
+        
         self.tabla.heading("#0", text="FOTO")
         self.tabla.column("#0", width=50, anchor="center")
-        self.tabla.heading("ID", text="ID"); self.tabla.column("ID", width=40)
-        self.tabla.heading("Tipo", text="TIPO"); self.tabla.column("Tipo", width=100)
-        self.tabla.heading("Detalle", text="DETALLE REGLA"); self.tabla.column("Detalle", width=350)
-        self.tabla.heading("Desc", text="DESC %"); self.tabla.column("Desc", width=80)
-        self.tabla.heading("Estado", text="ESTADO"); self.tabla.column("Estado", width=100)
-        self.tabla.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Configurar encabezados con ordenamiento
+        self.tabla.heading("ID", text="ID", command=lambda c="ID": self.ordenar_columna(c))
+        self.tabla.heading("Tipo", text="TIPO", command=lambda c="Tipo": self.ordenar_columna(c))
+        self.tabla.heading("Detalle", text="DETALLE REGLA", command=lambda c="Detalle": self.ordenar_columna(c))
+        self.tabla.heading("Desc", text="DESC %", command=lambda c="Desc": self.ordenar_columna(c))
+        self.tabla.heading("Estado", text="ESTADO", command=lambda c="Estado": self.ordenar_columna(c))
+        
+        self.tabla.column("ID", width=40)
+        self.tabla.column("Tipo", width=100)
+        self.tabla.column("Detalle", width=350)
+        self.tabla.column("Desc", width=80)
+        self.tabla.column("Estado", width=100)
+        self.tabla.pack(fill=tk.BOTH, expand=True)
+        
+        # Binding para selección de promociones
+        self.tabla.bind('<<TreeviewSelect>>', self.on_seleccionar_promocion)
+        
+        # Variables para ordenamiento
+        self.orden_asc = {col: False for col in self.cols}
 
-        # PANEL DERECHO
+        # PANEL DERECHO - TABS DE CREACIÓN
         right_panel = tk.Frame(body, bg=self.colors['bg_panel'], width=450, highlightthickness=1, highlightbackground=self.colors['border'])
         right_panel.pack(side=tk.RIGHT, fill=tk.Y)
         right_panel.pack_propagate(False)
@@ -102,6 +140,36 @@ class PromocionesGUI:
         self.setup_tab_qr()
         self.setup_tab_combo()
         self.setup_tab_volumen()
+        
+        # PANEL INFERIOR DESLIZANTE PARA EDICIÓN (dentro del panel izquierdo)
+        self.panel_edicion = tk.Frame(left_panel, bg=self.colors['bg_panel'], height=300, relief="raised", borderwidth=1)
+        self.panel_edicion.pack(side=tk.BOTTOM, fill=tk.X)
+        self.panel_edicion.pack_propagate(False)
+        
+        # Header del panel de edición
+        header_edicion = tk.Frame(self.panel_edicion, bg=self.colors['bg_panel'])
+        header_edicion.pack(fill=tk.X, padx=15, pady=(10, 5))
+        
+        self.lbl_titulo_edicion = tk.Label(header_edicion, text="📝 EDITAR PROMOCIÓN", 
+                                           font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['accent'])
+        self.lbl_titulo_edicion.pack(side=tk.LEFT)
+        
+        # Botón para cerrar panel
+        self.btn_cerrar_edicion = tk.Button(header_edicion, text="✕", bg=self.colors['danger'], fg="white",
+                                           font=('Segoe UI', 10, 'bold'), command=self.cerrar_panel_edicion,
+                                           width=3, height=1)
+        self.btn_cerrar_edicion.pack(side=tk.RIGHT)
+        
+        # Contenido del panel de edición
+        self.contenido_edicion = tk.Frame(self.panel_edicion, bg=self.colors['bg_panel'])
+        self.contenido_edicion.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
+        
+        # Variables para la edición
+        self.promocion_actual = None
+        self.tipo_promocion_actual = None
+        
+        # Inicialmente oculto
+        self.panel_edicion.pack_forget()
 
     def crear_input(self, master, label, validar_num=False):
         tk.Label(master, text=label, font=('Segoe UI', 8, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(anchor="w", pady=(8, 2))
@@ -209,29 +277,660 @@ class PromocionesGUI:
         conn = get_connection()
         try:
             with conn.cursor() as cursor:
-                # Cupones de esta empresa
+                # Obtener categorías para agrupar
+                cursor.execute("SELECT id, nombre FROM categorias WHERE empresa_id=%s ORDER BY nombre", (self.empresa_id,))
+                categorias_dict = {cat['id']: cat['nombre'] for cat in cursor.fetchall()}
+                
+                # Obtener datos agrupados por tipo y categoría
+                promociones = {
+                    'CUPÓN': {},
+                    'COMBO': {},
+                    'MAYORISTA': {}
+                }
+                
+                # Cupones de esta empresa (agrupar por tipo, sin categoría específica)
                 cursor.execute("SELECT id, codigo_qr, descuento_porcentaje FROM cupones WHERE activo=1 AND empresa_id=%s", (self.empresa_id,))
-                for r in cursor.fetchall(): 
-                    self.tabla.insert("", tk.END, text="", values=(r['id'], "CUPÓN", r['codigo_qr'], f"{r['descuento_porcentaje']}%", "ACTIVO"))
+                cupones = cursor.fetchall()
+                for r in cupones:
+                    categoria = "General"  # Todos los cupones en categoría General
+                    if categoria not in promociones['CUPÓN']:
+                        promociones['CUPÓN'][categoria] = []
+                    promociones['CUPÓN'][categoria].append({
+                        'id': r['id'],
+                        'detalle': r['codigo_qr'],
+                        'desc': f"{r['descuento_porcentaje']}%",
+                        'estado': 'ACTIVO',
+                        'imagen': None
+                    })
                 
-                # Combos de esta empresa
+                # Combos de esta empresa (agrupar por tipo, sin categoría específica)
                 cursor.execute("SELECT id, nombre_promo, descuento_porcentaje FROM promociones_combos WHERE activo=1 AND empresa_id=%s", (self.empresa_id,))
-                for r in cursor.fetchall(): 
-                    self.tabla.insert("", tk.END, text="", values=(r['id'], "COMBO", r['nombre_promo'], f"{r['descuento_porcentaje']}%", "ACTIVO"))
+                combos = cursor.fetchall()
+                for r in combos:
+                    categoria = "General"  # Todos los combos en categoría General
+                    if categoria not in promociones['COMBO']:
+                        promociones['COMBO'][categoria] = []
+                    promociones['COMBO'][categoria].append({
+                        'id': r['id'],
+                        'detalle': r['nombre_promo'],
+                        'desc': f"{r['descuento_porcentaje']}%",
+                        'estado': 'ACTIVO',
+                        'imagen': None
+                    })
                 
-                # Mayorista de esta empresa
+                # Mayorista de esta empresa (agrupar por categoría del producto)
                 cursor.execute("""
-                    SELECT v.id, p.nombre, p.imagen, v.cantidad_minima, v.descuento_porcentaje 
+                    SELECT v.id, p.nombre, p.imagen, p.categoria_id, v.cantidad_minima, v.descuento_porcentaje,
+                           COALESCE(cat.nombre, 'Sin categoría') as categoria_nombre
                     FROM promociones_volumen v 
                     JOIN productos p ON v.producto_id = p.id
+                    LEFT JOIN categorias cat ON p.categoria_id = cat.id
                     WHERE v.activo = 1 AND v.empresa_id = %s
                 """, (self.empresa_id,))
-                for r in cursor.fetchall():
-                    foto = self.obtener_imagen_desde_ruta(r['imagen'])
-                    self.tabla.insert("", tk.END, image=foto if foto else "", values=(r['id'], "MAYORISTA", f"{r['nombre']} (x{r['cantidad_minima']})", f"{r['descuento_porcentaje']}%", "ACTIVO"))
-        except Exception:
+                mayorista = cursor.fetchall()
+                for r in mayorista:
+                    categoria = r['categoria_nombre'] or 'Sin categoría'
+                    if categoria not in promociones['MAYORISTA']:
+                        promociones['MAYORISTA'][categoria] = []
+                    promociones['MAYORISTA'][categoria].append({
+                        'id': r['id'],
+                        'detalle': f"{r['nombre']} (x{r['cantidad_minima']})",
+                        'desc': f"{r['descuento_porcentaje']}%",
+                        'estado': 'ACTIVO',
+                        'imagen': r['imagen']
+                    })
+                
+                # Insertar agrupados por tipo y luego por categoría
+                for tipo, categorias in promociones.items():
+                    if categorias:
+                        # Crear nodo padre para el tipo
+                        total_promos = sum(len(lista) for lista in categorias.values())
+                        icono_tipo = "🎟️" if tipo == "CUPÓN" else "📦" if tipo == "COMBO" else "📊"
+                        tipo_item = self.tabla.insert("", tk.END, text=f"{icono_tipo} {tipo} ({total_promos})", 
+                                                     values=("", tipo, "", "", ""), open=True)
+                        
+                        # Insertar categorías dentro de cada tipo
+                        for categoria, lista in categorias.items():
+                            if lista:
+                                # Crear nodo para la categoría
+                                cat_item = self.tabla.insert(tipo_item, tk.END, 
+                                                           text=f"📁 {categoria} ({len(lista)})", 
+                                                           values=("", "", "", "", ""), open=True)
+                                
+                                # Insertar promociones de esta categoría
+                                for promo in lista:
+                                    foto = self.obtener_imagen_desde_ruta(promo['imagen']) if promo['imagen'] else None
+                                    self.tabla.insert(cat_item, tk.END, text="", image=foto if foto else "", 
+                                                   values=(promo['id'], tipo, promo['detalle'], promo['desc'], promo['estado']))
+                
+        except Exception as e:
+            print(f"Error cargando promociones: {e}")
             pass
         finally: conn.close()
+
+    def ordenar_columna(self, col):
+        """Ordena promociones por la columna seleccionada"""
+        self.orden_asc[col] = not self.orden_asc[col]
+        
+        # Obtener todos los items de la tabla
+        items = [(self.tabla.set(item, col), item) for item in self.tabla.get_children('')]
+        
+        # Ordenar según el tipo de columna
+        if col == "ID":
+            # Ordenar como número
+            try:
+                items.sort(key=lambda x: int(x[0]), reverse=not self.orden_asc[col])
+            except:
+                items.sort(key=lambda x: 0, reverse=not self.orden_asc[col])
+        elif col == "Desc":
+            # Ordenar como número (quitar %)
+            try:
+                items.sort(key=lambda x: float(str(x[0]).replace('%', '').strip()), reverse=not self.orden_asc[col])
+            except:
+                items.sort(key=lambda x: 0, reverse=not self.orden_asc[col])
+        else:
+            # Ordenar como texto
+            items.sort(key=lambda x: str(x[0]).lower(), reverse=not self.orden_asc[col])
+        
+        # Reordenar en la tabla
+        for index, (valor, item) in enumerate(items):
+            self.tabla.move(item, '', index)
+
+    def on_seleccionar_promocion(self, event):
+        """Maneja la selección de una promoción para edición"""
+        sel = self.tabla.selection()
+        if not sel: 
+            return
+        
+        # Obtener datos de la selección
+        item = sel[0]
+        promo_id = self.tabla.set(item, "ID")
+        promo_tipo = self.tabla.set(item, "Tipo")
+        
+        # Verificar que no sea una categoría (nodos padres tienen valores vacíos)
+        if not promo_id or promo_id == "":
+            return
+            
+        print(f"Seleccionada promoción {promo_tipo} ID: {promo_id}")
+        
+        # Abrir panel de edición según el tipo de promoción
+        self.abrir_panel_edicion(promo_id, promo_tipo)
+
+    def abrir_panel_edicion(self, promo_id, promo_tipo):
+        """Abre el panel inferior deslizante para editar la promoción seleccionada"""
+        # Guardar referencia a la promoción actual
+        self.promocion_actual = promo_id
+        self.tipo_promocion_actual = promo_tipo
+        
+        # Actualizar título del panel
+        self.lbl_titulo_edicion.config(text=f"📝 EDITAR {promo_tipo}")
+        
+        # Limpiar contenido anterior
+        for widget in self.contenido_edicion.winfo_children():
+            widget.destroy()
+        
+        # Crear formulario según el tipo
+        if promo_tipo == "CUPÓN":
+            self.crear_formulario_cupon_panel(promo_id)
+        elif promo_tipo == "COMBO":
+            self.crear_formulario_combo_panel(promo_id)
+        elif promo_tipo == "MAYORISTA":
+            self.crear_formulario_mayorista_panel(promo_id)
+        
+        # Mostrar panel con animación suave
+        self.mostrar_panel_edicion()
+
+    def mostrar_panel_edicion(self):
+        """Muestra el panel de edición con animación suave"""
+        print("DEBUG: Mostrando panel de edición")
+        
+        try:
+            # Primero quitar el panel si ya está packed
+            self.panel_edicion.pack_forget()
+            
+            # Forzar el panel a ocupar todo el ancho disponible
+            self.panel_edicion.pack(side=tk.BOTTOM, fill=tk.X, before=None)
+            print("DEBUG: Panel packed con fill=tk.X")
+            
+            # Forzar actualización para que se vea inmediatamente
+            self.panel_edicion.update_idletasks()
+            self.panel_edicion.update()
+            print("DEBUG: Panel actualizado")
+            
+            print(f"DEBUG: Panel winfo_manager: {self.panel_edicion.winfo_manager()}")
+            print(f"DEBUG: Panel winfo_height: {self.panel_edicion.winfo_height()}")
+            print(f"DEBUG: Panel winfo_width: {self.panel_edicion.winfo_width()}")
+            
+            # Si el ancho sigue siendo 1, intentar solución alternativa
+            if self.panel_edicion.winfo_width() <= 1:
+                print("DEBUG: Ancho sigue siendo 1, intentando solución alternativa")
+                # Forzar un ancho mínimo
+                self.panel_edicion.configure(width=800)
+                self.panel_edicion.update()
+                print(f"DEBUG: Panel con ancho forzado: {self.panel_edicion.winfo_width()}")
+            
+        except Exception as e:
+            print(f"DEBUG: Error mostrando panel: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def cerrar_panel_edicion(self):
+        """Cierra el panel de edición"""
+        self.panel_edicion.pack_forget()
+        self.promocion_actual = None
+        self.tipo_promocion_actual = None
+
+    def crear_formulario_cupon(self, dialog, cupon_id):
+        """Crea formulario para editar cupón"""
+        # Cargar datos del cupón
+        conn = get_connection()
+        cupon_data = None
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM cupones WHERE id=%s AND empresa_id=%s", (cupon_id, self.empresa_id))
+                cupon_data = cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el cupón: {e}")
+            dialog.destroy()
+            return
+        finally:
+            conn.close()
+        
+        if not cupon_data:
+            messagebox.showerror("Error", "Cupón no encontrado")
+            dialog.destroy()
+            return
+        
+        # Título
+        tk.Label(dialog, text="EDITAR CUPÓN QR", font=('Segoe UI', 12, 'bold'), 
+                bg=self.colors['bg_panel'], fg=self.colors['accent']).pack(pady=15)
+        
+        # Campos del formulario
+        frame_campos = tk.Frame(dialog, bg=self.colors['bg_panel'])
+        frame_campos.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # Código QR
+        tk.Label(frame_campos, text="Código QR:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(5, 2))
+        entry_codigo = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_codigo.pack(fill=tk.X, ipady=5)
+        entry_codigo.insert(0, cupon_data['codigo_qr'])
+        
+        # Descuento
+        tk.Label(frame_campos, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(10, 2))
+        entry_descuento = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_descuento.pack(fill=tk.X, ipady=5)
+        entry_descuento.insert(0, str(cupon_data['descuento_porcentaje']))
+        
+        # Estado
+        var_activo = tk.BooleanVar(value=cupon_data.get('activo', 1))
+        tk.Checkbutton(frame_campos, text="Activo", variable=var_activo, 
+                      bg=self.colors['bg_panel'], fg="white", selectcolor="#252525").pack(anchor="w", pady=10)
+        
+        # Botones
+        frame_botones = tk.Frame(dialog, bg=self.colors['bg_panel'])
+        frame_botones.pack(fill=tk.X, padx=20, pady=20)
+        
+        def guardar():
+            try:
+                descuento = float(entry_descuento.get())
+                codigo = entry_codigo.get().strip()
+                
+                if not codigo:
+                    messagebox.showwarning("Aviso", "El código QR no puede estar vacío")
+                    return
+                
+                conn = get_connection()
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            UPDATE cupones SET codigo_qr=%s, descuento_porcentaje=%s, activo=%s 
+                            WHERE id=%s AND empresa_id=%s
+                        """, (codigo, descuento, var_activo.get(), cupon_id, self.empresa_id))
+                    conn.commit()
+                    messagebox.showinfo("Éxito", "Cupón actualizado correctamente")
+                    self.cargar_promociones()  # Recargar la tabla
+                    dialog.destroy()
+                except Exception as e:
+                    messagebox.showerror("Error", f"No se pudo guardar: {e}")
+                finally:
+                    conn.close()
+            except ValueError:
+                messagebox.showerror("Error", "El descuento debe ser un número válido")
+        
+        def cancelar():
+            dialog.destroy()
+        
+        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", 
+                 command=guardar, pady=8).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        tk.Button(frame_botones, text="CANCELAR", bg=self.colors['danger'], fg="white", 
+                 command=cancelar, pady=8).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+
+    def crear_formulario_combo(self, dialog, combo_id):
+        """Crea formulario para editar combo"""
+        # Cargar datos del combo
+        conn = get_connection()
+        combo_data = None
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM promociones_combos WHERE id=%s AND empresa_id=%s", (combo_id, self.empresa_id))
+                combo_data = cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el combo: {e}")
+            dialog.destroy()
+            return
+        finally:
+            conn.close()
+        
+        if not combo_data:
+            messagebox.showerror("Error", "Combo no encontrado")
+            dialog.destroy()
+            return
+        
+        # Título
+        tk.Label(dialog, text="EDITAR COMBO", font=('Segoe UI', 12, 'bold'), 
+                bg=self.colors['bg_panel'], fg=self.colors['accent']).pack(pady=15)
+        
+        # Campos del formulario
+        frame_campos = tk.Frame(dialog, bg=self.colors['bg_panel'])
+        frame_campos.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # Nombre del combo
+        tk.Label(frame_campos, text="Nombre del Combo:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(5, 2))
+        entry_nombre = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_nombre.pack(fill=tk.X, ipady=5)
+        entry_nombre.insert(0, combo_data['nombre_promo'])
+        
+        # Descuento
+        tk.Label(frame_campos, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(10, 2))
+        entry_descuento = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_descuento.pack(fill=tk.X, ipady=5)
+        entry_descuento.insert(0, str(combo_data['descuento_porcentaje']))
+        
+        # Estado
+        var_activo = tk.BooleanVar(value=combo_data.get('activo', 1))
+        tk.Checkbutton(frame_campos, text="Activo", variable=var_activo, 
+                      bg=self.colors['bg_panel'], fg="white", selectcolor="#252525").pack(anchor="w", pady=10)
+        
+        # Botones
+        frame_botones = tk.Frame(dialog, bg=self.colors['bg_panel'])
+        frame_botones.pack(fill=tk.X, padx=20, pady=20)
+        
+        def guardar():
+            try:
+                descuento = float(entry_descuento.get())
+                nombre = entry_nombre.get().strip()
+                
+                if not nombre:
+                    messagebox.showwarning("Aviso", "El nombre del combo no puede estar vacío")
+                    return
+                
+                conn = get_connection()
+                try:
+                    with conn.cursor() as cursor:
+                        cursor.execute("""
+                            UPDATE promociones_combos SET nombre_promo=%s, descuento_porcentaje=%s, activo=%s 
+                            WHERE id=%s AND empresa_id=%s
+                        """, (nombre, descuento, var_activo.get(), combo_id, self.empresa_id))
+                    conn.commit()
+                    messagebox.showinfo("Éxito", "Combo actualizado correctamente")
+                    self.cargar_promociones()  # Recargar la tabla
+                    dialog.destroy()
+                except Exception as e:
+                    messagebox.showerror("Error", f"No se pudo guardar: {e}")
+                finally:
+                    conn.close()
+            except ValueError:
+                messagebox.showerror("Error", "El descuento debe ser un número válido")
+        
+        def cancelar():
+            dialog.destroy()
+        
+        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", 
+                 command=guardar, pady=8).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        tk.Button(frame_botones, text="CANCELAR", bg=self.colors['danger'], fg="white", 
+                 command=cancelar, pady=8).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 0))
+
+    def crear_formulario_cupon_panel(self, cupon_id):
+        """Crea formulario para editar cupón en el panel inferior"""
+        # Cargar datos del cupón
+        conn = get_connection()
+        cupon_data = None
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM cupones WHERE id=%s AND empresa_id=%s", (cupon_id, self.empresa_id))
+                cupon_data = cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el cupón: {e}")
+            return
+        finally:
+            conn.close()
+        
+        if not cupon_data:
+            messagebox.showerror("Error", "Cupón no encontrado")
+            return
+        
+        # Frame para campos en dos columnas
+        frame_campos = tk.Frame(self.contenido_edicion, bg=self.colors['bg_panel'])
+        frame_campos.pack(fill=tk.BOTH, expand=True)
+        
+        # Columna izquierda
+        frame_izq = tk.Frame(frame_campos, bg=self.colors['bg_panel'])
+        frame_izq.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Columna derecha
+        frame_der = tk.Frame(frame_campos, bg=self.colors['bg_panel'])
+        frame_der.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Código QR
+        tk.Label(frame_izq, text="Código QR:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        self.entry_codigo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_codigo_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        self.entry_codigo_panel.insert(0, cupon_data['codigo_qr'])
+        
+        # Descuento
+        tk.Label(frame_izq, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        self.entry_descuento_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_descuento_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        self.entry_descuento_panel.insert(0, str(cupon_data['descuento_porcentaje']))
+        
+        # Estado
+        self.var_activo_panel = tk.BooleanVar(value=cupon_data.get('activo', 1))
+        tk.Checkbutton(frame_izq, text="Activo", variable=self.var_activo_panel, 
+                      bg=self.colors['bg_panel'], fg="white", selectcolor="#252525").pack(anchor="w")
+        
+        # Botones
+        frame_botones = tk.Frame(frame_der, bg=self.colors['bg_panel'])
+        frame_botones.pack(fill=tk.X, pady=(20, 0))
+        
+        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", 
+                 command=lambda: self.guardar_cupon_panel(cupon_id), pady=5).pack(fill=tk.X, pady=(0, 5))
+        tk.Button(frame_botones, text="CANCELAR", bg=self.colors['danger'], fg="white", 
+                 command=self.cerrar_panel_edicion, pady=5).pack(fill=tk.X)
+
+    def crear_formulario_combo_panel(self, combo_id):
+        """Crea formulario para editar combo en el panel inferior"""
+        # Cargar datos del combo
+        conn = get_connection()
+        combo_data = None
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM promociones_combos WHERE id=%s AND empresa_id=%s", (combo_id, self.empresa_id))
+                combo_data = cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar el combo: {e}")
+            return
+        finally:
+            conn.close()
+        
+        if not combo_data:
+            messagebox.showerror("Error", "Combo no encontrado")
+            return
+        
+        # Frame para campos en dos columnas
+        frame_campos = tk.Frame(self.contenido_edicion, bg=self.colors['bg_panel'])
+        frame_campos.pack(fill=tk.BOTH, expand=True)
+        
+        # Columna izquierda
+        frame_izq = tk.Frame(frame_campos, bg=self.colors['bg_panel'])
+        frame_izq.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Columna derecha
+        frame_der = tk.Frame(frame_campos, bg=self.colors['bg_panel'])
+        frame_der.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Nombre del combo
+        tk.Label(frame_izq, text="Nombre Combo:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        self.entry_nombre_combo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_nombre_combo_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        self.entry_nombre_combo_panel.insert(0, combo_data['nombre_promo'])
+        
+        # Descuento
+        tk.Label(frame_izq, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        self.entry_descuento_combo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_descuento_combo_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        self.entry_descuento_combo_panel.insert(0, str(combo_data['descuento_porcentaje']))
+        
+        # Estado
+        self.var_activo_combo_panel = tk.BooleanVar(value=combo_data.get('activo', 1))
+        tk.Checkbutton(frame_izq, text="Activo", variable=self.var_activo_combo_panel, 
+                      bg=self.colors['bg_panel'], fg="white", selectcolor="#252525").pack(anchor="w")
+        
+        # Botones
+        frame_botones = tk.Frame(frame_der, bg=self.colors['bg_panel'])
+        frame_botones.pack(fill=tk.X, pady=(20, 0))
+        
+        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", 
+                 command=lambda: self.guardar_combo_panel(combo_id), pady=5).pack(fill=tk.X, pady=(0, 5))
+        tk.Button(frame_botones, text="CANCELAR", bg=self.colors['danger'], fg="white", 
+                 command=self.cerrar_panel_edicion, pady=5).pack(fill=tk.X)
+
+    def crear_formulario_mayorista_panel(self, mayorista_id):
+        """Crea formulario para editar promoción mayorista en el panel inferior"""
+        # Cargar datos del mayorista
+        conn = get_connection()
+        mayorista_data = None
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT v.*, p.nombre as producto_nombre 
+                    FROM promociones_volumen v 
+                    JOIN productos p ON v.producto_id = p.id 
+                    WHERE v.id=%s AND v.empresa_id=%s
+                """, (mayorista_id, self.empresa_id))
+                mayorista_data = cursor.fetchone()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo cargar la promoción mayorista: {e}")
+            return
+        finally:
+            conn.close()
+        
+        if not mayorista_data:
+            messagebox.showerror("Error", "Promoción mayorista no encontrada")
+            return
+        
+        # Frame para campos en dos columnas
+        frame_campos = tk.Frame(self.contenido_edicion, bg=self.colors['bg_panel'])
+        frame_campos.pack(fill=tk.BOTH, expand=True)
+        
+        # Columna izquierda
+        frame_izq = tk.Frame(frame_campos, bg=self.colors['bg_panel'])
+        frame_izq.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Columna derecha
+        frame_der = tk.Frame(frame_campos, bg=self.colors['bg_panel'])
+        frame_der.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Producto (solo lectura)
+        tk.Label(frame_izq, text="Producto:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        entry_producto = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#404040", fg="white", state='readonly')
+        entry_producto.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        entry_producto.insert(0, mayorista_data['producto_nombre'])
+        
+        # Cantidad mínima
+        tk.Label(frame_izq, text="Cantidad Mínima:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        self.entry_cantidad_mayorista_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_cantidad_mayorista_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        self.entry_cantidad_mayorista_panel.insert(0, str(mayorista_data['cantidad_minima']))
+        
+        # Descuento
+        tk.Label(frame_izq, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
+        self.entry_descuento_mayorista_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_descuento_mayorista_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
+        self.entry_descuento_mayorista_panel.insert(0, str(mayorista_data['descuento_porcentaje']))
+        
+        # Estado
+        self.var_activo_mayorista_panel = tk.BooleanVar(value=mayorista_data.get('activo', 1))
+        tk.Checkbutton(frame_izq, text="Activo", variable=self.var_activo_mayorista_panel, 
+                      bg=self.colors['bg_panel'], fg="white", selectcolor="#252525").pack(anchor="w")
+        
+        # Botones
+        frame_botones = tk.Frame(frame_der, bg=self.colors['bg_panel'])
+        frame_botones.pack(fill=tk.X, pady=(20, 0))
+        
+        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", 
+                 command=lambda: self.guardar_mayorista_panel(mayorista_id), pady=5).pack(fill=tk.X, pady=(0, 5))
+        tk.Button(frame_botones, text="CANCELAR", bg=self.colors['danger'], fg="white", 
+                 command=self.cerrar_panel_edicion, pady=5).pack(fill=tk.X)
+
+    def guardar_cupon_panel(self, cupon_id):
+        """Guarda los cambios del cupón desde el panel"""
+        try:
+            descuento = float(self.entry_descuento_panel.get())
+            codigo = self.entry_codigo_panel.get().strip()
+            
+            if not codigo:
+                messagebox.showwarning("Aviso", "El código QR no puede estar vacío")
+                return
+            
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE cupones SET codigo_qr=%s, descuento_porcentaje=%s, activo=%s 
+                        WHERE id=%s AND empresa_id=%s
+                    """, (codigo, descuento, self.var_activo_panel.get(), cupon_id, self.empresa_id))
+                conn.commit()
+                messagebox.showinfo("Éxito", "Cupón actualizado correctamente")
+                self.cargar_promociones()  # Recargar la tabla
+                self.cerrar_panel_edicion()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo guardar: {e}")
+            finally:
+                conn.close()
+        except ValueError:
+            messagebox.showerror("Error", "El descuento debe ser un número válido")
+
+    def guardar_combo_panel(self, combo_id):
+        """Guarda los cambios del combo desde el panel"""
+        try:
+            descuento = float(self.entry_descuento_combo_panel.get())
+            nombre = self.entry_nombre_combo_panel.get().strip()
+            
+            if not nombre:
+                messagebox.showwarning("Aviso", "El nombre del combo no puede estar vacío")
+                return
+            
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE promociones_combos SET nombre_promo=%s, descuento_porcentaje=%s, activo=%s 
+                        WHERE id=%s AND empresa_id=%s
+                    """, (nombre, descuento, self.var_activo_combo_panel.get(), combo_id, self.empresa_id))
+                conn.commit()
+                messagebox.showinfo("Éxito", "Combo actualizado correctamente")
+                self.cargar_promociones()  # Recargar la tabla
+                self.cerrar_panel_edicion()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo guardar: {e}")
+            finally:
+                conn.close()
+        except ValueError:
+            messagebox.showerror("Error", "El descuento debe ser un número válido")
+
+    def guardar_mayorista_panel(self, mayorista_id):
+        """Guarda los cambios de la promoción mayorista desde el panel"""
+        try:
+            cantidad = int(self.entry_cantidad_mayorista_panel.get())
+            descuento = float(self.entry_descuento_mayorista_panel.get())
+            
+            if cantidad <= 0:
+                messagebox.showwarning("Aviso", "La cantidad mínima debe ser mayor a 0")
+                return
+            
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE promociones_volumen SET cantidad_minima=%s, descuento_porcentaje=%s, activo=%s 
+                        WHERE id=%s AND empresa_id=%s
+                    """, (cantidad, descuento, self.var_activo_mayorista_panel.get(), mayorista_id, self.empresa_id))
+                conn.commit()
+                messagebox.showinfo("Éxito", "Promoción mayorista actualizada correctamente")
+                self.cargar_promociones()  # Recargar la tabla
+                self.cerrar_panel_edicion()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo guardar: {e}")
+            finally:
+                conn.close()
+        except ValueError:
+            messagebox.showerror("Error", "La cantidad y el descuento deben ser números válidos")
+
+    def crear_formulario_mayorista(self, dialog, mayorista_id):
+        """Crea formulario para editar promoción mayorista (método antiguo - obsoleto)"""
+        # Este método ya no se usa, pero se mantiene por compatibilidad
+        pass
+
+    def maximizar_ventana(self):
+        """Intenta maximizar la ventana con múltiples métodos"""
+        try:
+            self.root.state('zoomed')
+        except:
+            try:
+                self.root.attributes('-zoomed', True)
+            except:
+                # Si no funciona, establecer tamaño grande
+                self.root.geometry("1600x900+0+0")
 
 if __name__ == "__main__":
     # Soporta el paso de argumentos desde el main.py

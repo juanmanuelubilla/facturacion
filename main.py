@@ -81,6 +81,10 @@ class NexusLauncher:
         self.ent_pass = tk.Entry(frame, font=('Segoe UI', 12), bg=self.colors['card'], fg="white", borderwidth=0, show="*", insertbackground="white")
         self.ent_pass.pack(fill=tk.X, ipady=10)
         
+        # Vincular Enter para login
+        self.ent_user.bind('<Return>', lambda e: self.ent_pass.focus())
+        self.ent_pass.bind('<Return>', lambda e: self.validar_login())
+        
         tk.Button(frame, text="INGRESAR", font=('Segoe UI', 10, 'bold'), bg=self.colors['login_accent'], fg="white", 
                   relief="flat", cursor="hand2", command=self.validar_login).pack(fill=tk.X, pady=30, ipady=12)
 
@@ -178,6 +182,16 @@ class NexusLauncher:
         r3.pack(pady=(0, 20))
         self.crear_modulo(r3, "VENTAS", "POS.", self.colors['ventas'], "app_gui.py", "🛒", args)
 
+        # Intentar maximizar ventana principal
+        try:
+            self.root.state('zoomed')
+        except:
+            try:
+                self.root.attributes('-zoomed', True)
+            except:
+                # Si no funciona, establecer tamaño grande
+                self.root.geometry("1600x900+0+0")
+        
         tk.Button(self.root, text="⬅ CERRAR SESIÓN", font=('Segoe UI', 8, 'bold'), bg=self.colors['bg'], 
                   fg="#666", relief="flat", command=self.mostrar_login, cursor="hand2").place(x=20, y=20)
 
