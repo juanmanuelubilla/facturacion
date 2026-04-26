@@ -25,6 +25,9 @@ class ClientesUI:
         self.root.geometry("1500x800")
         self.root.configure(bg='#121212')
         
+        # Manejar cierre de ventana para evitar problemas
+        self.root.protocol("WM_DELETE_WINDOW", self.cerrar_ventana)
+        
         # Establecer icono de la aplicación si está configurado
         if self.icono_app and os.path.exists(self.icono_app):
             try:
@@ -223,8 +226,25 @@ class ClientesUI:
         # Tabla con estilo personalizado
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("Treeview", background=self.colors['card'], foreground="white", fieldbackground=self.colors['card'], borderwidth=0)
-        style.map("Treeview", background=[('selected', self.colors['accent'])])
+        
+        # Configuración completa para Treeview con fondo negro
+        style.configure("Treeview", 
+                        background=self.colors['card'], 
+                        foreground="white", 
+                        fieldbackground=self.colors['card'], 
+                        borderwidth=0)
+        
+        # Configuración para encabezados
+        style.configure("Treeview.Heading", 
+                        font=('Segoe UI', 10, 'bold'), 
+                        background="#252525", 
+                        foreground="white", 
+                        relief="flat")
+        
+        # Mapeo para selección y hover
+        style.map("Treeview",
+                  background=[('selected', self.colors['accent']), ('focus', self.colors['accent'])],
+                  foreground=[('selected', 'white'), ('focus', 'white')])
 
         columns = ("Foto", "ID", "Nombre", "Documento", "Tipo", "IVA", "Telefono", "WhatsApp")
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)
@@ -623,6 +643,33 @@ class ClientesUI:
         self.limpiar_preview(self.foto_preview_label)
         self.limpiar_preview(self.foto_opcional_preview_label)
 
+    def cerrar_ventana(self):
+        """Manejar el cierre de ventana de forma segura"""
+        try:
+            self.root.quit()
+            self.root.destroy()
+        except:
+            pass
+
+def volver_al_dashboard(self):
+        """Volver al dashboard principal"""
+        try:
+            # Cancelar edición si está en curso
+            if hasattr(self, 'editando_cliente') and self.editando_cliente:
+                self.cancelar_edicion()
+            
+            # IMPORTANTE: Salir del proceso para que main.py ejecute el finally
+            self.root.quit()  # Cierra el mainloop
+            self.root.destroy()  # Destruye la ventana
+        except Exception as e:
+            print(f"Error al volver al dashboard: {e}")
+            # En caso de error, igual salir del proceso
+            try:
+                self.root.quit()
+                self.root.destroy()
+            except:
+                pass
+
 def ejecutar_clientes(nombre_negocio="NEXUS", empresa_id=1):
     """Función principal para ejecutar el módulo de clientes"""
     try:
@@ -632,10 +679,8 @@ def ejecutar_clientes(nombre_negocio="NEXUS", empresa_id=1):
         # Manejar cierre de ventana
         def on_closing():
             try:
-                # Cancelar edición si está en curso
-                if hasattr(app, 'editando_cliente') and app.editando_cliente:
-                    app.cancelar_edicion()
-                root.destroy()
+                # Llamar al método de cerrar ventana que maneja todo correctamente
+                app.cerrar_ventana()
             except:
                 root.destroy()
         

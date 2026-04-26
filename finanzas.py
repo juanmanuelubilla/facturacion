@@ -83,7 +83,27 @@ class FinanzasGUI:
         tabla_frame = tk.Frame(cuerpo, bg=self.colors['card'])
         tabla_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        self.tabla = ttk.Treeview(tabla_frame, columns=("tipo", "cat", "monto", "desc", "hora"), show='headings')
+        # Configurar estilo para Treeview con fondo negro
+        style = ttk.Style()
+        style.theme_use("clam")
+        
+        style.configure("Treeview", 
+                        background=self.colors['card'], 
+                        foreground="white", 
+                        fieldbackground=self.colors['card'], 
+                        borderwidth=0)
+        
+        style.configure("Treeview.Heading", 
+                        font=('Segoe UI', 10, 'bold'), 
+                        background="#252525", 
+                        foreground="white", 
+                        relief="flat")
+        
+        style.map("Treeview",
+                  background=[('selected', '#00a8ff'), ('focus', '#00a8ff')],
+                  foreground=[('selected', 'white'), ('focus', 'white')])
+
+        self.tabla = ttk.Treeview(tabla_frame, columns=("tipo", "cat", "monto", "desc", "hora"), show='headings', style="Treeview")
         self.tabla.heading("tipo", text="TIPO"); self.tabla.column("tipo", width=90)
         self.tabla.heading("cat", text="CATEGORÍA"); self.tabla.column("cat", width=150)
         self.tabla.heading("monto", text="MONTO"); self.tabla.column("monto", width=100, anchor="e")

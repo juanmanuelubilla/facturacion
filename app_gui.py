@@ -36,6 +36,9 @@ class POSApp:
         self.empresa_id = int(empresa_id)
         self.usuario_id = int(usuario_id)
         
+        # Manejar cierre de ventana para evitar problemas
+        self.root.protocol("WM_DELETE_WINDOW", self.cerrar_ventana)
+        
         # 1. CARGAR CONFIGURACIÓN REAL DEL NEGOCIO DESDE DB
         self.config_negocio = self.cargar_datos_negocio()
         self.nombre_negocio = self.config_negocio.get('nombre_negocio', nombre_negocio).upper()
@@ -123,14 +126,22 @@ class POSApp:
     def _obtener_imagen_cliente(self, ruta):
         if not ruta or not os.path.exists(ruta):
             return None
+        # Si ya existe en cache, usar la existente
         if ruta in self.cliente_display_img_cache:
             return self.cliente_display_img_cache[ruta]
         try:
+            # Crear nueva imagen solo si no existe en cache
             img = Image.open(ruta).resize((460, 460), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
+            # Guardar en cache con referencia fuerte
             self.cliente_display_img_cache[ruta] = photo
+            # También guardar como atributo de la instancia para mayor seguridad
+            if not hasattr(self, '_img_refs'):
+                self._img_refs = {}
+            self._img_refs[ruta] = photo
             return photo
-        except Exception:
+        except Exception as e:
+            print(f"Error cargando imagen {ruta}: {e}")
             return None
 
     def _crear_pantalla_cliente(self):
@@ -190,36 +201,48 @@ class POSApp:
         if not win or not win.winfo_exists():
             return
 
-        self.cd_total.config(text=f"$ {float(self.total):.2f}")
-        self.cd_cliente.config(text=f"CLIENTE: {self.cliente_actual.get('nombre', 'CONSUMIDOR FINAL')}")
+        try:
+            self.cd_total.config(text=f"$ {float(self.total):.2f}")
+            self.cd_cliente.config(text=f"CLIENTE: {self.cliente_actual.get('nombre', 'CONSUMIDOR FINAL')}")
+        except Exception as e:
+            print(f"Error actualizando pantalla cliente: {e}")
+            return
 
-        ultimo = None
-        while self.orden:
-            sku = self.orden[-1]
-            if sku in self.items:
-                ultimo = self.items[sku]
-                break
-            self.orden.pop()
-        if not ultimo and self.items:
-            ultimo = list(self.items.values())[-1]
+        # Verificar que los widgets existan antes de usarlos
+        if not hasattr(self, 'cd_img') or not hasattr(self, 'cd_nombre') or not hasattr(self, 'cd_detalle'):
+            return
 
-        if ultimo:
-            self.cd_nombre.config(text=str(ultimo.get("nombre", "-")).upper())
-            cant_txt = self._fmt_cantidad(ultimo)
-            self.cd_detalle.config(text=f"{cant_txt} x $ {float(ultimo.get('precio', 0)):.2f} = $ {float(ultimo.get('subtotal', 0)):.2f}")
-            foto = self._obtener_imagen_cliente(ultimo.get("imagen"))
-            if foto:
-                self.cd_img.config(image=foto, text="")
-                self.cd_img.image = foto
-                self.cliente_display_last_img = foto
+        try:
+            ultimo = None
+            while self.orden:
+                sku = self.orden[-1]
+                if sku in self.items:
+                    ultimo = self.items[sku]
+                    break
+                self.orden.pop()
+            if not ultimo and self.items:
+                ultimo = list(self.items.values())[-1]
+
+            if ultimo:
+                self.cd_nombre.config(text=str(ultimo.get("nombre", "-")).upper())
+                cant_txt = self._fmt_cantidad(ultimo)
+                self.cd_detalle.config(text=f"{cant_txt} x $ {float(ultimo.get('precio', 0)):.2f} = $ {float(ultimo.get('subtotal', 0)):.2f}")
+                
+                # Cargar imagen con sistema mejorado de referencias
+                foto = self._obtener_imagen_cliente(ultimo.get("imagen"))
+                if foto:
+                    self.cd_img.config(image=foto, text="")
+                    self.cd_img.image = foto
+                else:
+                    self.cd_img.config(image="", text="SIN IMAGEN")
+                    self.cd_img.image = None
             else:
+                self.cd_nombre.config(text="SIN PRODUCTOS")
+                self.cd_detalle.config(text="")
                 self.cd_img.config(image="", text="SIN IMAGEN")
                 self.cd_img.image = None
-        else:
-            self.cd_nombre.config(text="SIN PRODUCTOS")
-            self.cd_detalle.config(text="")
-            self.cd_img.config(image="", text="SIN IMAGEN")
-            self.cd_img.image = None
+        except Exception as e:
+            print(f"Error actualizando contenido de pantalla cliente: {e}")
 
         for w in self.cd_items_container.winfo_children():
             w.destroy()
@@ -306,7 +329,24 @@ class POSApp:
         tree_frame = tk.Frame(dialog, bg=self.colors['bg_panel'])
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
-        tree = ttk.Treeview(tree_frame, columns=("ID", "Nombre", "Doc"), show="headings", height=8)
+        # Configurar estilo para este Treeview específico
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Dialog.Treeview", 
+                        background=self.colors['bg_panel'], 
+                        foreground="white", 
+                        fieldbackground=self.colors['bg_panel'], 
+                        borderwidth=0)
+        style.configure("Dialog.Treeview.Heading", 
+                        font=('Segoe UI', 10, 'bold'), 
+                        background="#252525", 
+                        foreground="white", 
+                        relief="flat")
+        style.map("Dialog.Treeview",
+                  background=[('selected', '#00a8ff'), ('focus', '#00a8ff')],
+                  foreground=[('selected', 'white'), ('focus', 'white')])
+
+        tree = ttk.Treeview(tree_frame, columns=("ID", "Nombre", "Doc"), show="headings", height=8, style="Dialog.Treeview")
         tree.heading("ID", text="ID"); tree.column("ID", width=40)
         tree.heading("Nombre", text="NOMBRE"); tree.column("Nombre", width=250)
         tree.heading("Doc", text="DOCUMENTO"); tree.column("Doc", width=120)
@@ -387,14 +427,20 @@ class POSApp:
             if 'conn' in locals() and conn: conn.close()
 
     def cargar_productos_stock(self):
-        """Carga los productos en la tabla de productos"""
-        try:
-            from productos import obtener_productos
-            productos = obtener_productos(self.empresa_id)
-            self.cargar_productos_en_tabla(productos)
-        except Exception as e:
-            print(f"Error al cargar productos: {e}")
-            messagebox.showerror("Error", f"Error al cargar productos: {e}")
+        for item in self.tabla.get_children(): self.tabla.delete(item)
+        prods = obtener_productos(self.empresa_id)
+        for p in prods:
+            # --- FILTRO DE STOCK: OCULTAR SI ES 0 O MENOR ---
+            stock_actual = float(p.get("stock", 0))
+            if stock_actual <= 0:
+                continue
+            # --- FILTRO DE ACTIVO: OCULTAR SI NO ESTÁ ACTIVO ---
+            if not self._db_flag_activo(p.get("activo", 1)):
+                continue
+                
+            icono = self.obtener_icono(p.get("imagen"))
+            precio_p = float(p['precio']) if p['precio'] else 0.0
+            self.tabla.insert("", tk.END, image=icono if icono else "", values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", p["stock"]))
 
     def _db_flag_activo(self, valor):
         """Convierte valor de DB a boolean"""
@@ -423,9 +469,46 @@ class POSApp:
         style = ttk.Style()
         style.theme_use('clam')
         self.root.configure(bg=self.colors['bg_main'])
-        style.configure("Custom.Treeview", background=self.colors['bg_panel'], foreground=self.colors['text_main'], 
-                        fieldbackground=self.colors['bg_panel'], borderwidth=0, font=('Segoe UI', 10), rowheight=45)
-        style.configure("Custom.Treeview.Heading", font=('Segoe UI', 10, 'bold'), background="#252525", foreground="white")
+        
+        # Configuración completa para Treeview con fondo negro
+        style.configure("Custom.Treeview", 
+                        background=self.colors['bg_panel'], 
+                        foreground=self.colors['text_main'], 
+                        fieldbackground=self.colors['bg_panel'], 
+                        borderwidth=0, 
+                        font=('Segoe UI', 10), 
+                        rowheight=45)
+        
+        # Configuración para encabezados
+        style.configure("Custom.Treeview.Heading", 
+                        font=('Segoe UI', 10, 'bold'), 
+                        background="#252525", 
+                        foreground="white", 
+                        relief="flat")
+        
+        # Mapeo para selección y hover
+        style.map("Custom.Treeview",
+                  background=[('selected', '#00a8ff'), ('focus', '#00a8ff')],
+                  foreground=[('selected', 'white'), ('focus', 'white')])
+        
+        # FORZAR ACTUALIZACIÓN DEL ESTILO
+        style.configure("TTreeview", 
+                        background=self.colors['bg_panel'], 
+                        foreground=self.colors['text_main'], 
+                        fieldbackground=self.colors['bg_panel'], 
+                        borderwidth=0, 
+                        font=('Segoe UI', 10), 
+                        rowheight=45)
+        
+        style.configure("TTreeview.Heading", 
+                        font=('Segoe UI', 10, 'bold'), 
+                        background="#252525", 
+                        foreground="white", 
+                        relief="flat")
+        
+        style.map("TTreeview",
+                  background=[('selected', '#00a8ff'), ('focus', '#00a8ff')],
+                  foreground=[('selected', 'white'), ('focus', 'white')])
 
     def create_widgets(self):
         main_container = tk.Frame(self.root, bg=self.colors['bg_main'], padx=20, pady=20)
@@ -531,13 +614,12 @@ class POSApp:
         # Separador
         tk.Frame(cat_frame, height=2, bg=self.colors['border']).pack(fill=tk.X, pady=5)
         
-        self.tabla = ttk.Treeview(cat_frame, columns=("SKU", "Nombre", "Precio", "Stock", "Categoría"), show="tree headings", style="Custom.Treeview")
+        self.tabla = ttk.Treeview(cat_frame, columns=("SKU", "Nombre", "Precio", "Stock"), show="tree headings", style="Custom.Treeview")
         self.tabla.heading("#0", text="IMG"); self.tabla.column("#0", width=60)
-        self.tabla.heading("SKU", text="SKU"); self.tabla.column("SKU", width=90)
-        self.tabla.heading("Nombre", text="PRODUCTO"); self.tabla.column("Nombre", width=200)
-        self.tabla.heading("Precio", text="PRECIO"); self.tabla.column("Precio", width=90)
-        self.tabla.heading("Stock", text="STOCK"); self.tabla.column("Stock", width=70)
-        self.tabla.heading("Categoría", text="CATEGORÍA"); self.tabla.column("Categoría", width=100)
+        self.tabla.heading("SKU", text="SKU"); self.tabla.column("SKU", width=100)
+        self.tabla.heading("Nombre", text="PRODUCTO"); self.tabla.column("Nombre", width=250)
+        self.tabla.heading("Precio", text="PRECIO"); self.tabla.column("Precio", width=100)
+        self.tabla.heading("Stock", text="STOCK"); self.tabla.column("Stock", width=80)
         self.tabla.pack(fill=tk.BOTH, expand=True)
         
         # --- DOBLE CLIC PARA AGREGAR PRODUCTO ---
@@ -1574,28 +1656,34 @@ class POSApp:
 
     def cargar_productos_en_tabla(self, productos):
         """Carga una lista específica de productos en la tabla"""
-        try:
-            # Limpiar tabla actual
-            for item in self.tabla.get_children():
-                self.tabla.delete(item)
-            
-            # Cargar productos
-            for p in productos:
-                # --- FILTRO DE STOCK: OCULTAR SI ES 0 O MENOR ---
-                stock_actual = float(p.get("stock", 0))
-                if stock_actual <= 0:
-                    continue
-                    
-                icono = self.obtener_icono(p.get("imagen"))
-                precio_p = float(p['precio']) if p['precio'] else 0.0
-                es_pesable = self._db_flag_activo(p.get('venta_por_peso', False))
-                stock_txt = self._fmt_stock(p.get("stock", 0), es_pesable)
-                categoria_nombre = p.get("categoria_nombre", "Sin categoría")
+        for item in self.tabla.get_children(): self.tabla.delete(item)
+        for p in productos:
+            # --- FILTRO DE STOCK: OCULTAR SI ES 0 O MENOR ---
+            stock_actual = float(p.get("stock", 0))
+            if stock_actual <= 0:
+                continue
+            # --- FILTRO DE ACTIVO: OCULTAR SI NO ESTÁ ACTIVO ---
+            if not self._db_flag_activo(p.get("activo", 1)):
+                continue
                 
-                self.tabla.insert("", tk.END, image=icono if icono else "", 
-                                values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", stock_txt, categoria_nombre))
-        except Exception as e:
-            print(f"Error al cargar productos en tabla: {e}")
+            icono = self.obtener_icono(p.get("imagen"))
+            precio_p = float(p['precio']) if p['precio'] else 0.0
+            self.tabla.insert("", tk.END, image=icono if icono else "", values=(p["codigo"], p["nombre"], f"$ {precio_p:.2f}", p["stock"]))
+
+    def cerrar_ventana(self):
+        """Manejar el cierre de ventana de forma segura"""
+        try:
+            # Verificar si hay una venta en curso
+            if hasattr(self, 'venta_en_curso') and self.venta_en_curso:
+                if messagebox.askyesno("Venta en curso", "¿Desea cancelar la venta actual y salir?"):
+                    self.cancelar_venta()
+                    self.root.quit()
+                    self.root.destroy()
+            else:
+                self.root.quit()
+                self.root.destroy()
+        except:
+            pass
 
 def ejecutar_ventas(nombre_negocio="NEXUS", empresa_id=1, usuario_id=1):
     """Función principal para ejecutar el módulo de ventas (POS)"""
@@ -1606,13 +1694,8 @@ def ejecutar_ventas(nombre_negocio="NEXUS", empresa_id=1, usuario_id=1):
         # Manejar cierre de ventana
         def on_closing():
             try:
-                # Verificar si hay una venta en curso
-                if hasattr(app, 'venta_en_curso') and app.venta_en_curso:
-                    if messagebox.askyesno("Venta en curso", "¿Desea cancelar la venta actual y salir?"):
-                        app.cancelar_venta()
-                        root.destroy()
-                else:
-                    root.destroy()
+                # Llamar al método de cerrar ventana que maneja todo correctamente
+                app.cerrar_ventana()
             except:
                 root.destroy()
         

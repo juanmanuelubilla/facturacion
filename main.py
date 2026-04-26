@@ -213,19 +213,9 @@ class NexusLauncher:
         if os.path.exists(archivo):
             self.root.withdraw()
             try:
-                if archivo == "generador_imagenes_ui.py":
-                    # Manejo especial para el generador de imágenes
-                    from generador_imagenes_ui import ejecutar_generador_imagenes
-                    ejecutar_generador_imagenes(self.empresa_seleccionada_id, self.config.get('nombre', 'NEXUS'))
-                elif archivo == "banners_ui.py":
-                    # Manejo especial para el módulo de banners
-                    from banners_ui import ejecutar_banners
-                    ejecutar_banners(self.empresa_seleccionada_id, self.config.get('nombre', 'NEXUS'))
-                else:
-                    # Manejo normal para otros scripts
-                    cmd = [sys.executable, archivo, self.config.get('nombre', 'NEXUS')]
-                    if extra_arg: cmd.extend(extra_arg.split())
-                    subprocess.run(cmd)
+                # SISTEMA DE LECTURA BAJO DEMANDA: Leer archivo cada vez sin carga en memoria
+                self.ejecutar_archivo_bajo_demanda(archivo, extra_arg)
+                
             except Exception as e: 
                 messagebox.showerror("Error", str(e))
             finally:
@@ -233,6 +223,107 @@ class NexusLauncher:
                 self.root.after(10, self.recargar_dashboard_async)
         else: 
             messagebox.showerror("Error", f"Falta el archivo: {archivo}")
+    
+    def ejecutar_archivo_bajo_demanda(self, archivo, extra_arg=None):
+        """Ejecutar archivo leyéndolo cada vez (sin carga en memoria)"""
+        # Construir argumentos según el módulo
+        args = self.construir_argumentos_modulo(archivo, extra_arg)
+        
+        # Ejecutar con lectura bajo demanda usando importación dinámica
+        self.ejecutar_modulo_dinamicamente(archivo, args)
+    
+    def ejecutar_modulo_dinamicamente(self, archivo, args):
+        """Ejecutar módulo dinámicamente sin activar __name__ == '__main__'"""
+        try:
+            # Importar el módulo dinámicamente
+            import importlib.util
+            import sys
+            
+            # Cargar el módulo desde archivo
+            spec = importlib.util.spec_from_file_location("modulo_temporal", archivo)
+            modulo = importlib.util.module_from_spec(spec)
+            
+            # Agregar a sys.modules para evitar problemas de importación
+            sys.modules["modulo_temporal"] = modulo
+            
+            # Cargar el módulo (esto ejecuta el código pero no como __main__)
+            spec.loader.exec_module(modulo)
+            
+            # Ejecutar la función principal si existe
+            if archivo == "generador_imagenes_ui.py":
+                # Solo necesita empresa_id y nombre_negocio
+                modulo.ejecutar_generador_imagenes(int(args[0]), args[1])
+            elif archivo == "banners_ui.py":
+                # Solo necesita empresa_id y nombre_negocio
+                modulo.ejecutar_banners(int(args[0]), args[1])
+            elif archivo == "promociones_ui.py":
+                # Para promociones, necesitamos ejecutar el main
+                root = tk.Tk()
+                app = modulo.PromocionesGUI(root, args[0], int(args[1]), int(args[2]))
+                try:
+                    root.mainloop()
+                except KeyboardInterrupt:
+                    print("\n🎟️ Módulo de promociones cerrado por el usuario")
+                    root.quit()
+                    root.destroy()
+                except Exception as e:
+                    print(f"❌ Error en módulo de promociones: {e}")
+                    root.quit()
+                    root.destroy()
+            elif archivo == "gestion_ui.py":
+                # Usar subprocess para evitar problemas de caché
+                cmd = [sys.executable, archivo] + args
+                subprocess.run(cmd)
+            elif archivo == "clientes_ui.py":
+                root = tk.Tk()
+                app = modulo.ClientesUI(root, args[0], int(args[1]))
+                root.mainloop()
+            elif archivo == "config_ui.py":
+                root = tk.Tk()
+                app = modulo.ConfigUI(root, args[0], int(args[1]))
+                root.mainloop()
+            elif archivo == "app_gui.py":
+                # Usar subprocess para evitar problemas de caché
+                cmd = [sys.executable, archivo] + args
+                subprocess.run(cmd)
+            else:
+                # Para otros archivos, usar subprocess como fallback
+                cmd = [sys.executable, archivo] + args
+                subprocess.run(cmd)
+                
+        except Exception as e:
+            # Si falla la importación dinámica, usar subprocess como fallback
+            print(f"Error en ejecución dinámica, usando subprocess: {e}")
+            cmd = [sys.executable, archivo] + args
+            subprocess.run(cmd)
+    
+    def construir_argumentos_modulo(self, archivo, extra_arg=None):
+        """Construir argumentos específicos para cada módulo"""
+        args = []
+        
+        if archivo == "generador_imagenes_ui.py":
+            args = [str(self.empresa_seleccionada_id), self.config.get('nombre', 'NEXUS')]
+        elif archivo == "banners_ui.py":
+            args = [str(self.empresa_seleccionada_id), self.config.get('nombre', 'NEXUS')]
+        elif archivo == "promociones_ui.py":
+            args = [self.config.get('nombre', 'NEXUS'), str(self.empresa_seleccionada_id), str(self.usuario_actual['id'])]
+        elif archivo == "gestion_ui.py":
+            args = [self.config.get('nombre', 'NEXUS'), str(self.empresa_seleccionada_id), str(self.usuario_actual['id'])]
+        elif archivo == "clientes_ui.py":
+            args = [self.config.get('nombre', 'NEXUS'), str(self.empresa_seleccionada_id)]
+        elif archivo == "config_ui.py":
+            args = [self.config.get('nombre', 'NEXUS'), str(self.empresa_seleccionada_id)]
+        elif archivo == "app_gui.py":
+            args = [self.config.get('nombre', 'NEXUS'), str(self.empresa_seleccionada_id), str(self.usuario_actual['id'])]
+        else:
+            # Para otros scripts, usar el formato antiguo
+            args = [self.config.get('nombre', 'NEXUS')]
+        
+        # Agregar argumentos extra si existen
+        if extra_arg: 
+            args.extend(extra_arg.split())
+        
+        return args
     
     def recargar_dashboard_async(self):
         """Recargar dashboard de forma optimizada"""

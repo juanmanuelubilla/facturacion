@@ -1,8 +1,17 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-from PIL import Image, ImageTk
+import sqlite3
 import os
 import sys
+from datetime import datetime
+
+# Importar PIL al nivel del módulo para evitar conflictos
+try:
+    from PIL import Image, ImageTk
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    print("⚠️ PIL no disponible, las imágenes no funcionarán")
 
 # Importaciones de tu lógica
 from productos import obtener_productos, buscar_producto_por_codigo
@@ -57,9 +66,11 @@ class GestionGUI:
 
         self.imagenes_cache = {}
         self.imagen_ruta = None
-        self.iconos_cache = {}  # Cache para iconos de productos
+        self.imagen_actual = None  # Referencia fuerte para imagen actual
+        self.productos_data = {}  # Datos de productos para Treeview
+        self.tabla_imagenes = {}  # Diccionario CRÍTICO para mantener referencias de imágenes en tabla
         self.modo_formulario = "NUEVO"
-        self.orden_asc = {col: False for col in ("codigo", "nombre", "costo", "precio", "stock", "agrupar", "tags")}
+        self.orden_reversa = False  # Dirección de ordenamiento
         
         self.configurar_estilo()
         self.crear_widgets(nombre_negocio)
@@ -131,6 +142,9 @@ class GestionGUI:
                         borderwidth=0, font=('Segoe UI', 10), rowheight=45)
         style.configure('Custom.Treeview.Heading', font=('Segoe UI', 10, 'bold'), 
                         background="#252525", foreground="white", relief="flat")
+        style.map('Custom.Treeview', 
+                 background=[('selected', self.colors['accent'])],
+                 foreground=[('selected', 'white')])
 
     def crear_widgets(self, nombre_negocio):
         self.main_container = tk.Frame(self.root, bg=self.colors['bg_main'], padx=20, pady=20)
@@ -138,13 +152,13 @@ class GestionGUI:
         self.main_container.columnconfigure(0, weight=1) 
         self.main_container.rowconfigure(0, weight=1)
 
-        # --- TABLA ---
+        # --- LISTADO DE PRODUCTOS ---
         self.panel_tabla = tk.Frame(self.main_container, bg=self.colors['bg_main'])
-        self.panel_tabla.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        self.panel_tabla.grid(row=0, column=0, sticky="nsew", padx=10)
         self.panel_tabla.columnconfigure(0, weight=1); self.panel_tabla.rowconfigure(1, weight=1)
 
         tools = tk.Frame(self.panel_tabla, bg=self.colors['bg_main'])
-        tools.grid(row=0, column=0, sticky="ew", pady=(0, 15))
+        tools.grid(row=0, column=0, sticky="ew", pady=15)
         
         tk.Label(tools, text=f"{nombre_negocio.upper()}", font=('Segoe UI', 18, 'bold'), bg=self.colors['bg_main'], fg="white").pack(side=tk.LEFT)
         
@@ -153,41 +167,39 @@ class GestionGUI:
         self.buscador = tk.Entry(search_frame, font=('Segoe UI', 12), bg="#252525", fg="white", insertbackground="white")
         self.buscador.pack(fill=tk.X, ipady=8)
         self.buscador.insert(0, " 🔍 Buscar producto...")
+        self.buscador.bind('<FocusIn>', self.limpiar_buscador)
         self.buscador.bind('<KeyRelease>', lambda e: self.cargar_productos(self.buscador.get().replace(" 🔍 Buscar producto...", "").lower()))
 
         tk.Button(tools, text="+ NUEVO", bg=self.colors['accent'], fg="white", command=self.preparar_nuevo_producto, padx=15).pack(side=tk.RIGHT)
 
+        # Treeview para listado de productos - SOLO COLUMNA #0 como en el ejemplo
         tree_container = tk.Frame(self.panel_tabla, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1)
         tree_container.grid(row=1, column=0, sticky="nsew")
         tree_container.columnconfigure(0, weight=1); tree_container.rowconfigure(0, weight=1)
-
-        self.cols = ("codigo", "nombre", "costo", "precio", "stock", "agrupar", "tags", "activo")
+        
+        # Treeview con imágenes - columnas de productos (igual que vieja versión + categoría y tags)
+        self.cols = ("codigo", "nombre", "costo", "precio", "stock", "categoria", "tags")
         self.tabla = ttk.Treeview(tree_container, columns=self.cols, show='tree headings', style="Custom.Treeview")
+        
+        # Configurar encabezados
         self.tabla.heading("#0", text="IMG"); self.tabla.column("#0", width=60)
-        # Configurar encabezados personalizados
-        self.tabla.heading("codigo", text="CÓDIGO", command=lambda c="codigo": self.ordenar_columna(c))
-        self.tabla.heading("nombre", text="PRODUCTO", command=lambda c="nombre": self.ordenar_columna(c))
-        self.tabla.heading("costo", text="COSTO", command=lambda c="costo": self.ordenar_columna(c))
-        self.tabla.heading("precio", text="PRECIO", command=lambda c="precio": self.ordenar_columna(c))
-        self.tabla.heading("stock", text="STOCK", command=lambda c="stock": self.ordenar_columna(c))
-        self.tabla.heading("agrupar", text="AGRUPAR", command=lambda c="agrupar": self.ordenar_columna(c))
-        self.tabla.heading("tags", text="TAGS", command=lambda c="tags": self.ordenar_columna(c))
-        self.tabla.heading("activo", text="ACTIVO", command=lambda c="activo": self.ordenar_columna(c))
-        
         for col in self.cols:
+            self.tabla.heading(col, text=col.upper())
             self.tabla.column(col, width=100, anchor="center")
-        self.tabla.column("nombre", width=200)
-        self.tabla.column("agrupar", width=120)
+        self.tabla.column("nombre", width=250)
+        self.tabla.column("categoria", width=120)
         self.tabla.column("tags", width=120)
-        self.tabla.column("activo", width=80)
-        self.tabla.grid(row=0, column=0, sticky="nsew")
-        self.tabla.bind('<<TreeviewSelect>>', self.on_seleccionar_producto)
-        self.tabla.bind('<Button-3>', self.expandir_contraer_categoria)  # Click derecho para expandir/contraer
         
-        # Configurar estilo para aumentar altura de filas
-        style = ttk.Style()
-        style.configure("Custom.Treeview", rowheight=40)  # Aumentar altura de filas
-        style.configure("Custom.Treeview.Heading", font=('Segoe UI', 10, 'bold'))
+        # Scrollbar
+        scrollbar = tk.Scrollbar(tree_container, orient="vertical", command=self.tabla.yview)
+        self.tabla.configure(yscrollcommand=scrollbar.set)
+        
+        self.tabla.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        
+        # Evento de selección
+        self.tabla.bind("<<TreeviewSelect>>", self.on_seleccionar_producto)
+        
 
         # --- FORMULARIO ---
         self.panel_form = tk.Frame(self.main_container, bg=self.colors['bg_panel'], highlightbackground=self.colors['border'], highlightthickness=1, padx=25)
@@ -229,7 +241,7 @@ class GestionGUI:
         self.combo_categoria.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=2)
         
         tk.Button(cat_frame, text="+", bg=self.colors['accent'], fg="white", font=('Segoe UI', 8, 'bold'), 
-                 width=3, command=self.nueva_categoria).pack(side=tk.RIGHT, padx=(5, 0))
+                 width=3, command=self.nueva_categoria).pack(side=tk.RIGHT, padx=5)
         
         # Campo de Tags
         f_tags = tk.Frame(self.panel_form, bg=self.colors['bg_panel'])
@@ -240,7 +252,7 @@ class GestionGUI:
         
         # Frame para checkboxes en la misma línea
         frame_checkboxes = tk.Frame(self.panel_form, bg=self.colors['bg_panel'])
-        frame_checkboxes.pack(fill=tk.X, pady=(10, 8))
+        frame_checkboxes.pack(fill=tk.X, pady=10)
         
         # Campo ACTIVO (izquierda)
         self.var_activo = tk.BooleanVar(value=True)
@@ -283,132 +295,34 @@ class GestionGUI:
         frame_botones_img = tk.Frame(self.panel_form, bg=self.colors['bg_panel'])
         frame_botones_img.pack(fill=tk.X, pady=5)
         
-        tk.Button(frame_botones_img, text="FOTO", command=self.seleccionar_imagen, bg=self.colors['accent'], fg="white", font=('Segoe UI', 8, 'bold'), pady=10).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        tk.Button(frame_botones_img, text="FOTO", command=self.seleccionar_imagen, bg=self.colors['accent'], fg="white", font=('Segoe UI', 8, 'bold'), pady=10).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
         self.btn_eliminar_imagen = tk.Button(frame_botones_img, text="ELIMINAR FOTO", command=self.eliminar_foto, bg=self.colors['danger'], fg="white", font=('Segoe UI', 8, 'bold'), pady=10)
-        self.btn_eliminar_imagen.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(2, 0))
+        self.btn_eliminar_imagen.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=2)
         self.btn_eliminar_imagen.config(state='disabled')  # Deshabilitado hasta que haya una imagen
 
         # Frame para botones inferiores
         frame_botones = tk.Frame(self.panel_form, bg=self.colors['bg_panel'])
-        frame_botones.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 20))
+        frame_botones.pack(fill=tk.X, side=tk.BOTTOM, pady=20)
         
-        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", command=self.guardar_cambios, pady=10).pack(fill=tk.X, pady=(0, 5))
+        tk.Button(frame_botones, text="GUARDAR", bg=self.colors['success'], fg="white", command=self.guardar_cambios, pady=10).pack(fill=tk.X, pady=5)
         self.btn_del_producto = tk.Button(frame_botones, text="ELIMINAR PRODUCTO", bg="#e84393", fg="white", command=self.eliminar_producto_completo, pady=10)
         self.btn_del_producto.pack(fill=tk.X)
 
     def cargar_productos(self, filtro=None):
-        """Carga productos agrupados por categorías en vista jerárquica"""
-        from productos import obtener_categorias
-        conn = get_connection()
-        try:
-            # Obtener categorías
-            categorias = obtener_categorias(self.empresa_id)
-            categorias_dict = {cat['id']: cat['nombre'] for cat in categorias}
-            
-            # Obtener productos
-            if filtro:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen, venta_por_peso, categoria_id, tags
-                    FROM productos
-                    WHERE activo = 1 AND empresa_id = %s AND (codigo LIKE %s OR nombre LIKE %s OR tags LIKE %s)
-                    ORDER BY categoria_id, nombre
-                """, (self.empresa_id, f"%{filtro}%", f"%{filtro}%", f"%{filtro}%"))
-                productos = cursor.fetchall()
-                cursor.close()
-            else:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT id, codigo, nombre, descripcion, precio, costo, stock, activo, imagen, venta_por_peso, categoria_id, tags
-                    FROM productos
-                    WHERE activo = 1 AND empresa_id = %s
-                    ORDER BY categoria_id, nombre
-                """, (self.empresa_id,))
-                productos = cursor.fetchall()
-                cursor.close()
-            
-            # Agrupar productos por categoría
-            productos_por_categoria = {}
-            productos_sin_categoria = []
-            
-            for p in productos:
-                cat_id = p.get("categoria_id")
-                if cat_id and cat_id in categorias_dict:
-                    if cat_id not in productos_por_categoria:
-                        productos_por_categoria[cat_id] = []
-                    productos_por_categoria[cat_id].append(p)
-                else:
-                    productos_sin_categoria.append(p)
-            
-            # Limpiar tabla
-            for item in self.tabla.get_children():
-                self.tabla.delete(item)
-            
-            # Insertar categorías y productos
-            categoria_items = {}
-            
-            # Primero insertar productos con categoría
-            for cat_id, productos_cat in productos_por_categoria.items():
-                cat_nombre = categorias_dict[cat_id]
-                
-                # Insertar categoría como nodo padre
-                cat_item = self.tabla.insert("", tk.END, text=f"📁 {cat_nombre} ({len(productos_cat)})", 
-                                           values=("", "", "", "", "", cat_nombre, ""), open=True)
-                categoria_items[cat_id] = cat_item
-                
-                # Insertar productos de esta categoría
-                for p in productos_cat:
-                    icono = self.obtener_icono(p.get("imagen"))
-                    tags_text = p.get("tags", "")[:30] + "..." if p.get("tags") and len(p.get("tags")) > 30 else (p.get("tags") or "")
-                    es_pesable = bool(int(p.get('venta_por_peso') or 0))
-                    stock_txt = self._fmt_stock(p.get('stock', 0), es_pesable)
-                    
-                    activo_text = "✅" if p.get('activo', 1) == 1 else "❌"
-                    self.tabla.insert(cat_item, tk.END, text="", image=icono if icono else "", values=(
-                        p["codigo"], p["nombre"], f"${float(p.get('costo', 0)):.2f}", 
-                        f"${float(p.get('precio', 0)):.2f}", stock_txt, cat_nombre, tags_text, activo_text
-                    ))
-            
-            # Luego insertar productos sin categoría
-            if productos_sin_categoria:
-                cat_item = self.tabla.insert("", tk.END, text=f"📁 Sin categoría ({len(productos_sin_categoria)})", 
-                                           values=("", "", "", "", "", "Sin categoría", ""), open=True)
-                
-                for p in productos_sin_categoria:
-                    icono = self.obtener_icono(p.get("imagen"))
-                    tags_text = p.get("tags", "")[:30] + "..." if p.get("tags") and len(p.get("tags")) > 30 else (p.get("tags") or "")
-                    es_pesable = bool(int(p.get('venta_por_peso') or 0))
-                    stock_txt = self._fmt_stock(p.get('stock', 0), es_pesable)
-                    
-                    self.tabla.insert(cat_item, tk.END, text="", image=icono if icono else "", values=(
-                        p["codigo"], p["nombre"], f"${float(p.get('costo', 0)):.2f}", 
-                        f"${float(p.get('precio', 0)):.2f}", stock_txt, "Sin categoría", tags_text
-                    ))
-            
-            # Guardar referencia para expandir/contraer
-            self.categoria_items = categoria_items
-            
-        finally:
-            conn.close()
+        for item in self.tabla.get_children(): self.tabla.delete(item)
+        productos = obtener_productos(self.empresa_id)
+        for p in productos:
+            sku, nom = str(p.get("codigo", "")), str(p.get("nombre", ""))
+            if filtro and filtro not in sku.lower() and filtro not in nom.lower(): continue
+            icono = self.obtener_icono(p.get("imagen"))
+            cat_nombre = p.get("categoria_nombre", "Sin categoría")
+            tags = p.get("tags", "")
+            self.tabla.insert("", tk.END, image=icono if icono else "",
+                values=(sku, nom, f"${float(p.get('costo', 0)):.2f}", f"${float(p.get('precio', 0)):.2f}", p.get('stock', 0), cat_nombre, tags))
 
-    def expandir_contraer_categoria(self, event):
-        """Expande o contrae una categoría con click derecho"""
-        try:
-            # Obtener el item bajo el cursor
-            item = self.tabla.identify_row(event.y)
-            if not item:
-                return
-            
-            # Verificar si es una categoría (no tiene valores de producto)
-            values = self.tabla.item(item)['values']
-            if values and values[0] == "":  # Es una categoría
-                # Alternar estado de expansión
-                if self.tabla.item(item)['open']:
-                    self.tabla.item(item, open=False)
-                else:
-                    self.tabla.item(item, open=True)
-        except Exception as e:
-            pass  # Error al expandir/contraer
+    def limpiar_buscador(self, event):
+        if self.buscador.get() == " 🔍 Buscar producto...":
+            self.buscador.delete(0, tk.END)
 
     def on_seleccionar_producto(self, event):
         sel = self.tabla.selection()
@@ -416,6 +330,46 @@ class GestionGUI:
         p = buscar_producto_por_codigo(self.tabla.set(sel[0], "codigo"), self.empresa_id)
         if p:
             self.modo_formulario = "EDITAR"; self.llenar_formulario(p); self.panel_form.grid()
+
+    def ordenar_tabla(self, col):
+        """Ordena la tabla por la columna especificada"""
+        # Obtener todos los items
+        items = [(self.tabla.set(item, col), item) for item in self.tabla.get_children('')]
+        
+        # Determinar tipo de ordenamiento
+        if col in ['costo', 'precio']:
+            # Ordenar numéricamente quitando $ y convirtiendo a float
+            try:
+                items.sort(key=lambda x: float(str(x[0]).replace('$', '').replace(',', '').strip()), 
+                         reverse=getattr(self, 'orden_reversa', False))
+            except:
+                items.sort(reverse=getattr(self, 'orden_reversa', False))
+        elif col == 'stock':
+            # Ordenar por stock manejando unidades y metros
+            try:
+                def parse_stock(val):
+                    val_str = str(val).lower()
+                    if 'm' in val_str:
+                        return float(val_str.replace('m', '').strip())
+                    elif 'u' in val_str:
+                        return float(val_str.replace('u', '').strip())
+                    else:
+                        return float(val_str)
+                items.sort(key=lambda x: parse_stock(x[0]), 
+                         reverse=getattr(self, 'orden_reversa', False))
+            except:
+                items.sort(reverse=getattr(self, 'orden_reversa', False))
+        else:
+            # Ordenar alfabéticamente
+            items.sort(key=lambda x: str(x[0]).lower(), 
+                      reverse=getattr(self, 'orden_reversa', False))
+        
+        # Alternar dirección para próxima vez
+        self.orden_reversa = not getattr(self, 'orden_reversa', False)
+        
+        # Reordenar items en la tabla
+        for index, (val, item) in enumerate(items):
+            self.tabla.move(item, '', index)
 
     def guardar_cambios(self):
         try:
@@ -440,28 +394,54 @@ class GestionGUI:
                 else:
                     cursor.execute("UPDATE productos SET nombre=%s, descripcion=%s, precio=%s, costo=%s, stock=%s, imagen=%s, ultimo_usuario_id=%s, venta_por_peso=%s, categoria_id=%s, tags=%s, activo=%s WHERE codigo=%s AND empresa_id=%s", 
                                     (d['nombre'], desc, d['precio'], d['costo'], stock_normalizado, self.imagen_ruta, self.usuario_id, int(self.var_venta_por_peso.get()), categoria_id, tags, activo, d['codigo'], self.empresa_id))
-            conn.commit(); conn.close(); messagebox.showinfo("OK", "Guardado"); self.cargar_productos(); self.panel_form.grid_remove()
-        except Exception as e: messagebox.showerror("Error", str(e))
+            conn.commit()
+            conn.close()
+            messagebox.showinfo("OK", "Guardado")
+            self.cargar_productos()
+            self.panel_form.grid_remove()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def guardar_cambios(self):
+        try:
+            d = {k: v.get().strip() for k, v in self.entries.items()}
+            desc = self.txt_descripcion.get("1.0", tk.END).strip()
+            stock_normalizado = self._fmt_stock(d['stock'], bool(int(self.var_venta_por_peso.get())))
+            
+            # Obtener categoría y tags
+            categoria_seleccionada = self.combo_categoria.get()
+            categoria_id = None
+            if categoria_seleccionada:
+                categoria_id = self.categoria_datos.get(categoria_seleccionada)
+            
+            tags = self.ent_tags.get().strip()
+            activo = 1 if self.var_activo.get() else 0
+            
+            conn = get_connection()
+            with conn.cursor() as cursor:
+                if self.modo_formulario == "NUEVO":
+                    cursor.execute("INSERT INTO productos (codigo, nombre, descripcion, precio, costo, stock, imagen, ultimo_usuario_id, empresa_id, activo, venta_por_peso, categoria_id, tags) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", 
+                                    (d['codigo'], d['nombre'], desc, d['precio'], d['costo'], stock_normalizado, self.imagen_ruta, self.usuario_id, self.empresa_id, activo, int(self.var_venta_por_peso.get()), categoria_id, tags))
+                else:
+                    cursor.execute("UPDATE productos SET nombre=%s, descripcion=%s, precio=%s, costo=%s, stock=%s, imagen=%s, ultimo_usuario_id=%s, venta_por_peso=%s, categoria_id=%s, tags=%s, activo=%s WHERE codigo=%s AND empresa_id=%s", 
+                                    (d['nombre'], desc, d['precio'], d['costo'], stock_normalizado, self.imagen_ruta, self.usuario_id, int(self.var_venta_por_peso.get()), categoria_id, tags, activo, d['codigo'], self.empresa_id))
+            conn.commit()
+            conn.close()
+            messagebox.showinfo("OK", "Guardado")
+            self.cargar_productos()
+            self.panel_form.grid_remove()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     def obtener_icono(self, ruta):
-        if not ruta:
-            return None
-        
-        # Usar caché para evitar cargar la misma imagen múltiples veces
-        if ruta in self.iconos_cache:
-            return self.iconos_cache[ruta]
-        
-        # Verificar si la ruta existe
-        if not os.path.exists(ruta):
-            return None
-            
+        if not ruta or not os.path.exists(ruta): return None
+        if ruta in self.imagenes_cache: return self.imagenes_cache[ruta]
         try:
             img = Image.open(ruta).resize((32, 32), Image.Resampling.LANCZOS)
-            icono = ImageTk.PhotoImage(img)
-            self.iconos_cache[ruta] = icono  # Guardar en caché
-            return icono
-        except Exception as e:
-            return None
+            photo = ImageTk.PhotoImage(img)
+            self.imagenes_cache[ruta] = photo
+            return photo
+        except: return None
 
     def llenar_formulario(self, p):
         self.limpiar_formulario()
@@ -489,28 +469,55 @@ class GestionGUI:
         
         # Cargar imagen del producto si existe
         if p.get("imagen"):
-            self.imagen_ruta = p["imagen"]
-            if os.path.exists(p["imagen"]):
+            # Convertir ruta relativa a absoluta si es necesario
+            imagen_ruta = p["imagen"]
+            
+            if not os.path.isabs(imagen_ruta):
+                imagen_ruta = os.path.join(os.path.dirname(__file__), imagen_ruta)
+            
+            self.imagen_ruta = imagen_ruta
+            
+            if os.path.exists(imagen_ruta):
                 try:
-                    img = Image.open(p["imagen"]).resize((150, 150), Image.Resampling.LANCZOS)
-                    ph = ImageTk.PhotoImage(img)
-                    self.preview_label.config(image=ph, text="")
-                    self.preview_label.image = ph  # Mantener referencia
-                    self.imagenes_cache[p["imagen"]] = ph  # Guardar en caché
-                    self.btn_eliminar_imagen.config(state='normal')  # Habilitar botón ELIMINAR FOTO
+                    from PIL import Image, ImageTk
+                    
+                    # Abrir y redimensionar la imagen
+                    img = Image.open(imagen_ruta)
+                    img = img.resize((150, 150), Image.Resampling.LANCZOS)
+                    
+                    # Convertir a PhotoImage de Tkinter usando PIL
+                    photo = ImageTk.PhotoImage(img)
+                    
+                    # IMPORTANTE: Asignar imagen inmediatamente y mantener referencia
+                    self.preview_label.configure(image=photo, text="")
+                    self.preview_label.image = photo
+                    self.imagen_actual = photo
+                    
+                    # Forzar actualización del widget
+                    self.preview_label.update()
+                    
+                    self.btn_eliminar_imagen.config(state='normal')
+                    
                 except Exception as e:
-                    self.preview_label.config(image="", text="SIN IMAGEN")
+                    self.preview_label.config(image=None, text="SIN IMAGEN")
+                    self.preview_label.image = None
+                    self.btn_eliminar_imagen.config(state='disabled')
             else:
-                self.preview_label.config(image="", text="SIN IMAGEN")
+                self.preview_label.config(image=None, text="SIN IMAGEN")
+                self.preview_label.image = None
+                self.btn_eliminar_imagen.config(state='disabled')
         else:
-            self.preview_label.config(image="", text="SIN IMAGEN")
+            self.imagen_ruta = None
+            self.preview_label.config(image=None, text="SIN IMAGEN")
+            self.preview_label.image = None
+            self.btn_eliminar_imagen.config(state='disabled')
 
     def seleccionar_imagen(self):
         """Abre diálogo para seleccionar una imagen del producto"""
         ruta = filedialog.askopenfilename(
             title="Seleccionar imagen del producto",
             filetypes=[
-                ("Archivos de imagen", "*.jpg *.jpeg *.png *.gif *.bmp"),
+                ("Archivos de imagen", "*.png *.jpg *.jpeg *.gif *.bmp"),
                 ("Todos los archivos", "*.*")
             ]
         )
@@ -524,6 +531,7 @@ class GestionGUI:
                 self.btn_eliminar_imagen.config(state='normal')  # Habilitar botón ELIMINAR FOTO
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo cargar la imagen: {e}")
+                self.preview_label.config(image=None, text="SIN IMAGEN")
 
     def eliminar_producto_completo(self):
         """Elimina completamente el producto y todo lo asociado (excepto facturas y ventas)"""
@@ -587,7 +595,7 @@ class GestionGUI:
             if resultado:
                 # Limpiar imagen del formulario
                 self.imagen_ruta = None
-                self.preview_label.config(image="", text="SIN IMAGEN")
+                self.preview_label.config(image=None, text="SIN IMAGEN")
                 self.btn_eliminar_imagen.config(state='disabled')
                 messagebox.showinfo("Eliminado", "La foto del producto ha sido eliminada")
         else:
@@ -600,7 +608,11 @@ class GestionGUI:
     def limpiar_formulario(self):
         for e in self.entries.values(): e.delete(0, tk.END)
         self.var_venta_por_peso.set(False)
-        self.txt_descripcion.delete("1.0", tk.END); self.preview_label.config(image="", text="SIN IMAGEN"); self.imagen_ruta = None
+        self.txt_descripcion.delete("1.0", tk.END)
+        self.preview_label.config(image="", text="SIN IMAGEN")
+        self.preview_label.image = None  # Limpiar referencia CRÍTICA
+        self.imagen_actual = None  # También limpiar esta referencia
+        self.imagen_ruta = None
         self.btn_eliminar_imagen.config(state='disabled')  # Deshabilitar botón ELIMINAR FOTO
         self.combo_categoria.set("")
         self.ent_tags.delete(0, tk.END)
@@ -649,6 +661,33 @@ class GestionGUI:
         
         entry.bind('<Return>', lambda e: guardar())
 
+    def cerrar_ventana(self):
+        """Manejar el cierre de ventana de forma segura - misma lógica que generador_imagenes_ui.py"""
+        try:
+            # Limpiar caché de imágenes para liberar memoria
+            if hasattr(self, 'imagenes_cache'):
+                self.imagenes_cache.clear()
+            if hasattr(self, 'tabla_imagenes'):
+                self.tabla_imagenes.clear()
+            if hasattr(self, 'imagen_ruta'):
+                self.imagen_ruta = None
+            if hasattr(self, 'imagen_actual'):
+                self.imagen_actual = None
+            
+            # Limpiar archivo temporal de imagen si existe
+            if hasattr(self, 'temp_image_path') and self.temp_image_path:
+                try:
+                    import os
+                    if os.path.exists(self.temp_image_path):
+                        os.remove(self.temp_image_path)
+                except:
+                    pass
+                
+            self.root.quit()
+            self.root.destroy()
+        except:
+            pass
+
     def maximizar_ventana(self):
         """Intenta maximizar la ventana con múltiples métodos"""
         try:
@@ -660,90 +699,31 @@ class GestionGUI:
                 # Si no funciona, establecer tamaño grande
                 self.root.geometry("1600x900+0+0")
 
-    def ordenar_columna(self, col):
-        """Ordena productos dentro de cada categoría manteniendo la estructura jerárquica"""
-        self.orden_asc[col] = not self.orden_asc[col]
-        
-        # Obtener todas las categorías (nodos padres)
-        categorias = []
-        for item in self.tabla.get_children(''):
-            values = self.tabla.item(item)['values']
-            # Las categorías tienen todos los valores vacíos excepto el campo agrupar (ahora 8 valores con activo)
-            if values and len(values) == 8 and values[0] == "" and values[1] == "" and values[2] == "" and values[3] == "" and values[4] == "" and values[6] == "" and values[7] == "":
-                categorias.append(item)
-        
-        # Para cada categoría, ordenar sus productos
-        for categoria_item in categorias:
-            # Obtener todos los productos de esta categoría
-            productos = []
-            for producto_item in self.tabla.get_children(categoria_item):
-                # Obtener el valor de la columna para ordenamiento
-                valor = self.tabla.set(producto_item, col)
-                
-                # Manejar valores numéricos para costo, precio y stock
-                if col in ['costo', 'precio']:
-                    try:
-                        # Quitar símbolo $ y convertir a float
-                        valor_num = float(str(valor).replace('$', '').replace(',', '').strip())
-                        productos.append((valor_num, producto_item))
-                    except:
-                        productos.append((0, producto_item))
-                elif col == 'stock':
-                    try:
-                        # Manejar valores de stock que pueden tener formato especial
-                        stock_str = str(valor)
-                        if 'kg' in stock_str.lower():
-                            valor_num = float(stock_str.replace('kg', '').strip())
-                        else:
-                            valor_num = float(stock_str.replace(',', '').strip())
-                        productos.append((valor_num, producto_item))
-                    except:
-                        productos.append((0, producto_item))
-                elif col == 'nombre':
-                    # Para columna PRODUCTO, ordenar por el nombre desde los values
-                    nombre_producto = self.tabla.set(producto_item, "nombre")
-                    productos.append((str(nombre_producto).lower(), producto_item))
-                elif col == 'agrupar':
-                    # Para columna AGRUPAR, ordenar por nombre del producto (columna #0)
-                    nombre_producto = self.tabla.item(producto_item)['text']
-                    productos.append((str(nombre_producto).lower(), producto_item))
-                else:
-                    # Para código, tags - ordenamiento alfabético
-                    productos.append((str(valor).lower(), producto_item))
-            
-            # Ordenar productos según la columna y dirección
-            productos.sort(key=lambda x: x[0], reverse=not self.orden_asc[col])
-            
-            # Reordenar los productos dentro de la categoría
-            for index, (valor_ordenado, producto_item) in enumerate(productos):
-                self.tabla.move(producto_item, categoria_item, index)
-
 def ejecutar_gestion(negocio, emp_id, usu_id):
     """Función principal para ejecutar el módulo de gestión"""
+    root = tk.Tk()
+    app = GestionGUI(root, negocio, emp_id, usu_id)
+    
+    # Manejar cierre de ventana - misma lógica que generador_imagenes_ui.py
+    def on_closing():
+        try:
+            # Llamar al método de cerrar ventana que maneja todo correctamente
+            app.cerrar_ventana()
+        except:
+            root.destroy()
+    
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+    
+    # Manejar excepciones en mainloop
     try:
-        root = tk.Tk()
-        app = GestionGUI(root, negocio, emp_id, usu_id)
-        
-        # Manejar cierre de ventana
-        def on_closing():
-            try:
-                # Detener cualquier proceso en ejecución
-                if hasattr(app, 'editando_producto') and app.editando_producto:
-                    app.cancelar_edicion()
-                root.destroy()
-            except:
-                root.destroy()
-        
-        root.protocol("WM_DELETE_WINDOW", on_closing)
         root.mainloop()
-        
     except KeyboardInterrupt:
-        print("\n📦 Módulo de gestión cerrado por el usuario")
-    except Exception as e:
-        print(f"❌ Error en módulo de gestión: {e}")
-    finally:
-        # Limpiar recursos si es necesario
         pass
+    except Exception as e:
+        try:
+            root.destroy()
+        except:
+            pass
 
 if __name__ == "__main__":
     negocio = sys.argv[1] if len(sys.argv) > 1 else "NEXUS"

@@ -10,7 +10,7 @@ def obtener_productos(empresa_id):
                        c.nombre as categoria_nombre
                 FROM productos p
                 LEFT JOIN categorias c ON p.categoria_id = c.id
-                WHERE p.activo = 1 AND p.empresa_id = %s
+                WHERE p.empresa_id = %s
                 ORDER BY p.id DESC
             """, (empresa_id,))
             return cursor.fetchall()
@@ -27,7 +27,7 @@ def buscar_producto_por_codigo(codigo, empresa_id):
                        c.nombre as categoria_nombre
                 FROM productos p
                 LEFT JOIN categorias c ON p.categoria_id = c.id
-                WHERE p.codigo=%s AND p.activo = 1 AND p.empresa_id = %s
+                WHERE p.codigo=%s AND p.empresa_id = %s
                 LIMIT 1
             """, (codigo, empresa_id))
             return cursor.fetchone()
@@ -44,7 +44,7 @@ def buscar_productos_por_nombre(nombre, empresa_id):
                        c.nombre as categoria_nombre
                 FROM productos p
                 LEFT JOIN categorias c ON p.categoria_id = c.id
-                WHERE p.nombre LIKE %s AND p.activo = 1 AND p.empresa_id = %s
+                WHERE p.nombre LIKE %s AND p.empresa_id = %s
                 ORDER BY p.nombre ASC
             """, (f"%{nombre}%", empresa_id))
             return cursor.fetchall()
@@ -124,7 +124,7 @@ def buscar_productos_por_categoria(categoria_id, empresa_id):
                        c.nombre as categoria_nombre
                 FROM productos p
                 LEFT JOIN categorias c ON p.categoria_id = c.id
-                WHERE p.categoria_id = %s AND p.activo = 1 AND p.empresa_id = %s
+                WHERE p.categoria_id = %s AND p.empresa_id = %s
                 ORDER BY p.nombre ASC
             """, (categoria_id, empresa_id))
             return cursor.fetchall()
@@ -142,7 +142,7 @@ def buscar_productos_por_tag(tag, empresa_id):
                        c.nombre as categoria_nombre
                 FROM productos p
                 LEFT JOIN categorias c ON p.categoria_id = c.id
-                WHERE p.tags LIKE %s AND p.activo = 1 AND p.empresa_id = %s
+                WHERE p.tags LIKE %s AND p.empresa_id = %s
                 ORDER BY p.nombre ASC
             """, (f"%{tag}%", empresa_id))
             return cursor.fetchall()
@@ -172,7 +172,7 @@ def obtener_tags_unicos(empresa_id):
             cursor.execute("""
                 SELECT DISTINCT tags
                 FROM productos 
-                WHERE tags IS NOT NULL AND tags != '' AND activo = 1 AND empresa_id = %s
+                WHERE tags IS NOT NULL AND tags != '' AND empresa_id = %s
             """, (empresa_id,))
             resultados = cursor.fetchall()
             

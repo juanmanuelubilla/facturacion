@@ -20,6 +20,9 @@ class PromocionesGUI:
         self.root.after(500, self.maximizar_ventana)
         self.root.after(1000, self.maximizar_ventana)  # Segundo intento
         
+        # Manejar cierre de ventana para evitar problemas
+        self.root.protocol("WM_DELETE_WINDOW", self.cerrar_ventana)
+        
         self.colors = {
             'bg_main': '#121212', 'bg_panel': '#1e1e1e', 'accent': '#f1c40f',
             'success': '#00db84', 'danger': '#ff4757', 'text_main': '#ffffff',
@@ -48,11 +51,53 @@ class PromocionesGUI:
         style = ttk.Style()
         style.theme_use('clam')
         self.root.configure(bg=self.colors['bg_main'])
-        style.configure('Custom.Treeview', background=self.colors['bg_panel'], 
-                        foreground=self.colors['text_main'], fieldbackground=self.colors['bg_panel'], 
-                        borderwidth=0, font=('Segoe UI', 10), rowheight=35)
-        style.configure('Custom.Treeview.Heading', font=('Segoe UI', 10, 'bold'), 
-                        background="#252525", foreground="white", relief="flat")
+        
+        # Configuración completa para Treeview con fondo negro
+        style.configure('Custom.Treeview', 
+                        background=self.colors['bg_panel'], 
+                        foreground=self.colors['text_main'], 
+                        fieldbackground=self.colors['bg_panel'], 
+                        borderwidth=0, 
+                        font=('Segoe UI', 10), 
+                        rowheight=35)
+        
+        # Configuración para encabezados
+        style.configure('Custom.Treeview.Heading', 
+                        font=('Segoe UI', 10, 'bold'), 
+                        background="#252525", 
+                        foreground="white", 
+                        relief="flat")
+        
+        # Mapeo para selección y hover
+        style.map('Custom.Treeview',
+                  background=[('selected', '#00a8ff'), ('focus', '#00a8ff')],
+                  foreground=[('selected', 'white'), ('focus', 'white')])
+        
+        # Configuración mejorada para Notebook con estilo de ventana
+        style.configure("TNotebook", background=self.colors['bg_main'], borderwidth=2, highlightthickness=2)
+        style.configure("TNotebook.Tab", padding=[12, 10], font=('Segoe UI', 9, 'bold'))
+        
+        # Mapeo de colores específicos para cada tipo de pestaña
+        tabs_config = {
+            "CUPÓN": self.colors['accent'],
+            "COMBOS": "#e84393",
+            "MAYORISTA": "#00db84"
+        }
+
+        for name, color in tabs_config.items():
+            style.configure(f"{name}.TNotebook.Tab", 
+                            background=self.colors['bg_panel'], 
+                            foreground="#888", 
+                            padding=[12, 10], 
+                            font=('Segoe UI', 9, 'bold'),
+                            borderwidth=1,
+                            relief="raised")
+            
+            style.map(f"{name}.TNotebook.Tab", 
+                      background=[("selected", color), ("active", "#2d2d2d")],
+                      foreground=[("selected", "white"), ("active", "white")],
+                      bordercolor=[("selected", color), ("active", "#444444")],
+                      relief=[("selected", "sunken"), ("active", "raised")])
 
     def obtener_imagen_desde_ruta(self, ruta):
         if not ruta or not os.path.exists(ruta):
@@ -134,7 +179,7 @@ class PromocionesGUI:
         self.tab_qr = tk.Frame(tabs, bg=self.colors['bg_panel'], padx=15)
         self.tab_combo = tk.Frame(tabs, bg=self.colors['bg_panel'], padx=15)
         self.tab_vol = tk.Frame(tabs, bg=self.colors['bg_panel'], padx=15)
-        tabs.add(self.tab_qr, text=" CUPÓN QR "); tabs.add(self.tab_combo, text=" COMBOS "); tabs.add(self.tab_vol, text=" MAYORISTA ")
+        tabs.add(self.tab_qr, text=" 🎫 CUPÓN "); tabs.add(self.tab_combo, text=" 🎁 COMBOS "); tabs.add(self.tab_vol, text=" 📦 MAYORISTA ")
         tabs.pack(fill=tk.BOTH, expand=True)
 
         self.setup_tab_qr()
@@ -173,7 +218,7 @@ class PromocionesGUI:
 
     def crear_input(self, master, label, validar_num=False):
         tk.Label(master, text=label, font=('Segoe UI', 8, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(anchor="w", pady=(8, 2))
-        e = tk.Entry(master, font=('Segoe UI', 10), bg="#252525", fg="white", borderwidth=0, validate='key' if validar_num else 'none', validatecommand=self.vcmd if validar_num else None)
+        e = tk.Entry(master, font=('Segoe UI', 10), bg="#000000", fg="white", borderwidth=0, validate='key' if validar_num else 'none', validatecommand=self.vcmd if validar_num else None)
         e.pack(fill=tk.X, ipady=5); return e
 
     def actualizar_sugerencias(self, entry, listbox):
@@ -191,14 +236,14 @@ class PromocionesGUI:
         self.ent_codigo = self.crear_input(self.tab_qr, "CÓDIGO")
         self.ent_porcentaje_qr = self.crear_input(self.tab_qr, "DESCUENTO (%)", True)
         tk.Button(self.tab_qr, text="GUARDAR Y GENERAR QR", bg=self.colors['success'], command=self.guardar_cupon, font=('Segoe UI', 10, 'bold')).pack(fill=tk.X, pady=15)
-        self.qr_label = tk.Label(self.tab_qr, bg="#252525", width=180, height=180); self.qr_label.pack()
+        self.qr_label = tk.Label(self.tab_qr, bg="#000000", width=180, height=180); self.qr_label.pack()
 
     def setup_tab_combo(self):
         tk.Label(self.tab_combo, text="COMBO DE PRODUCTOS", font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['accent']).pack(pady=15)
         self.ent_nombre_combo = self.crear_input(self.tab_combo, "NOMBRE COMBO")
         tk.Label(self.tab_combo, text="BUSCAR PRODUCTO", font=('Segoe UI', 8), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(anchor="w")
-        self.search_combo = tk.Entry(self.tab_combo, bg="#252525", fg="white", borderwidth=0); self.search_combo.pack(fill=tk.X, ipady=5); self.search_combo.bind("<KeyRelease>", lambda e: self.actualizar_sugerencias(self.search_combo, self.list_sug_combo))
-        self.list_sug_combo = tk.Listbox(self.tab_combo, bg="#252525", fg="white", height=4); self.list_sug_combo.pack(fill=tk.X); self.list_sug_combo.bind("<Double-Button-1>", self.seleccionar_para_combo)
+        self.search_combo = tk.Entry(self.tab_combo, bg="#000000", fg="white", borderwidth=0); self.search_combo.pack(fill=tk.X, ipady=5); self.search_combo.bind("<KeyRelease>", lambda e: self.actualizar_sugerencias(self.search_combo, self.list_sug_combo))
+        self.list_sug_combo = tk.Listbox(self.tab_combo, bg="#000000", fg="white", height=4); self.list_sug_combo.pack(fill=tk.X); self.list_sug_combo.bind("<Double-Button-1>", self.seleccionar_para_combo)
         self.list_actual_combo = tk.Listbox(self.tab_combo, bg="#1a1a1a", fg=self.colors['success'], height=4); self.list_actual_combo.pack(fill=tk.X, pady=5)
         self.ent_porcentaje_combo = self.crear_input(self.tab_combo, "DESCUENTO (%)", True)
         tk.Button(self.tab_combo, text="CREAR COMBO", bg=self.colors['accent'], command=self.guardar_combo, font=('Segoe UI', 10, 'bold')).pack(fill=tk.X, pady=15)
@@ -206,8 +251,8 @@ class PromocionesGUI:
     def setup_tab_volumen(self):
         tk.Label(self.tab_vol, text="PRECIO POR CANTIDAD", font=('Segoe UI', 11, 'bold'), bg=self.colors['bg_panel'], fg=self.colors['volumen']).pack(pady=15)
         tk.Label(self.tab_vol, text="BUSCAR PRODUCTO", font=('Segoe UI', 8), bg=self.colors['bg_panel'], fg=self.colors['text_dim']).pack(anchor="w")
-        self.search_vol = tk.Entry(self.tab_vol, bg="#252525", fg="white", borderwidth=0); self.search_vol.pack(fill=tk.X, ipady=5); self.search_vol.bind("<KeyRelease>", lambda e: self.actualizar_sugerencias(self.search_vol, self.list_sug_vol))
-        self.list_sug_vol = tk.Listbox(self.tab_vol, bg="#252525", fg="white", height=4); self.list_sug_vol.pack(fill=tk.X); self.list_sug_vol.bind("<Double-Button-1>", self.seleccionar_para_volumen)
+        self.search_vol = tk.Entry(self.tab_vol, bg="#000000", fg="white", borderwidth=0); self.search_vol.pack(fill=tk.X, ipady=5); self.search_vol.bind("<KeyRelease>", lambda e: self.actualizar_sugerencias(self.search_vol, self.list_sug_vol))
+        self.list_sug_vol = tk.Listbox(self.tab_vol, bg="#000000", fg="white", height=4); self.list_sug_vol.pack(fill=tk.X); self.list_sug_vol.bind("<Double-Button-1>", self.seleccionar_para_volumen)
         self.ent_cant_min = self.crear_input(self.tab_vol, "CANTIDAD MÍNIMA", True)
         self.ent_porcentaje_vol = self.crear_input(self.tab_vol, "DESCUENTO (%)", True)
         tk.Button(self.tab_vol, text="CREAR REGLA MAYORISTA", bg=self.colors['volumen'], fg="white", command=self.guardar_volumen, font=('Segoe UI', 10, 'bold')).pack(fill=tk.X, pady=20)
@@ -359,7 +404,11 @@ class PromocionesGUI:
                                 
                                 # Insertar promociones de esta categoría
                                 for promo in lista:
-                                    foto = self.obtener_imagen_desde_ruta(promo['imagen']) if promo['imagen'] else None
+                                    foto = None
+                                    try:
+                                        foto = self.obtener_imagen_desde_ruta(promo['imagen']) if promo['imagen'] else None
+                                    except:
+                                        foto = None  # Si hay error al cargar imagen, continuar sin foto
                                     self.tabla.insert(cat_item, tk.END, text="", image=foto if foto else "", 
                                                    values=(promo['id'], tipo, promo['detalle'], promo['desc'], promo['estado']))
                 
@@ -474,6 +523,25 @@ class PromocionesGUI:
             import traceback
             traceback.print_exc()
 
+    def volver_al_dashboard(self):
+        """Volver al dashboard principal"""
+        try:
+            # Cerrar panel de edición si está abierto
+            if hasattr(self, 'panel_edicion_visible') and self.panel_edicion_visible:
+                self.cerrar_panel_edicion()
+            
+            # IMPORTANTE: Salir del proceso para que main.py ejecute el finally
+            self.root.quit()  # Cierra el mainloop
+            self.root.destroy()  # Destruye la ventana
+        except Exception as e:
+            print(f"Error al volver al dashboard: {e}")
+            # En caso de error, igual salir del proceso
+            try:
+                self.root.quit()
+                self.root.destroy()
+            except:
+                pass
+
     def cerrar_panel_edicion(self):
         """Cierra el panel de edición"""
         self.panel_edicion.pack_forget()
@@ -511,13 +579,13 @@ class PromocionesGUI:
         
         # Código QR
         tk.Label(frame_campos, text="Código QR:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(5, 2))
-        entry_codigo = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_codigo = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#000000", fg="white")
         entry_codigo.pack(fill=tk.X, ipady=5)
         entry_codigo.insert(0, cupon_data['codigo_qr'])
         
         # Descuento
         tk.Label(frame_campos, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(10, 2))
-        entry_descuento = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_descuento = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#000000", fg="white")
         entry_descuento.pack(fill=tk.X, ipady=5)
         entry_descuento.insert(0, str(cupon_data['descuento_porcentaje']))
         
@@ -596,13 +664,13 @@ class PromocionesGUI:
         
         # Nombre del combo
         tk.Label(frame_campos, text="Nombre del Combo:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(5, 2))
-        entry_nombre = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_nombre = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#000000", fg="white")
         entry_nombre.pack(fill=tk.X, ipady=5)
         entry_nombre.insert(0, combo_data['nombre_promo'])
         
         # Descuento
         tk.Label(frame_campos, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w", pady=(10, 2))
-        entry_descuento = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#252525", fg="white")
+        entry_descuento = tk.Entry(frame_campos, font=('Segoe UI', 10), bg="#000000", fg="white")
         entry_descuento.pack(fill=tk.X, ipady=5)
         entry_descuento.insert(0, str(combo_data['descuento_porcentaje']))
         
@@ -683,13 +751,13 @@ class PromocionesGUI:
         
         # Código QR
         tk.Label(frame_izq, text="Código QR:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
-        self.entry_codigo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_codigo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#000000", fg="white")
         self.entry_codigo_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
         self.entry_codigo_panel.insert(0, cupon_data['codigo_qr'])
         
         # Descuento
         tk.Label(frame_izq, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
-        self.entry_descuento_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_descuento_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#000000", fg="white")
         self.entry_descuento_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
         self.entry_descuento_panel.insert(0, str(cupon_data['descuento_porcentaje']))
         
@@ -740,13 +808,13 @@ class PromocionesGUI:
         
         # Nombre del combo
         tk.Label(frame_izq, text="Nombre Combo:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
-        self.entry_nombre_combo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_nombre_combo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#000000", fg="white")
         self.entry_nombre_combo_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
         self.entry_nombre_combo_panel.insert(0, combo_data['nombre_promo'])
         
         # Descuento
         tk.Label(frame_izq, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
-        self.entry_descuento_combo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_descuento_combo_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#000000", fg="white")
         self.entry_descuento_combo_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
         self.entry_descuento_combo_panel.insert(0, str(combo_data['descuento_porcentaje']))
         
@@ -808,13 +876,13 @@ class PromocionesGUI:
         
         # Cantidad mínima
         tk.Label(frame_izq, text="Cantidad Mínima:", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
-        self.entry_cantidad_mayorista_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_cantidad_mayorista_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#000000", fg="white")
         self.entry_cantidad_mayorista_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
         self.entry_cantidad_mayorista_panel.insert(0, str(mayorista_data['cantidad_minima']))
         
         # Descuento
         tk.Label(frame_izq, text="Descuento (%):", bg=self.colors['bg_panel'], fg="white").pack(anchor="w")
-        self.entry_descuento_mayorista_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#252525", fg="white")
+        self.entry_descuento_mayorista_panel = tk.Entry(frame_izq, font=('Segoe UI', 10), bg="#000000", fg="white")
         self.entry_descuento_mayorista_panel.pack(fill=tk.X, ipady=3, pady=(2, 10))
         self.entry_descuento_mayorista_panel.insert(0, str(mayorista_data['descuento_porcentaje']))
         
@@ -931,6 +999,18 @@ class PromocionesGUI:
             except:
                 # Si no funciona, establecer tamaño grande
                 self.root.geometry("1600x900+0+0")
+    
+    def cerrar_ventana(self):
+        """Manejar el cierre de ventana de forma segura"""
+        try:
+            # Cerrar panel de edición si está abierto
+            if hasattr(self, 'panel_edicion_visible') and self.panel_edicion_visible:
+                self.cerrar_panel_edicion()
+            
+            self.root.quit()
+            self.root.destroy()
+        except:
+            pass
 
 def ejecutar_promociones(negocio, emp_id, usu_id):
     """Función principal para ejecutar el módulo de promociones"""
@@ -941,10 +1021,8 @@ def ejecutar_promociones(negocio, emp_id, usu_id):
         # Manejar cierre de ventana
         def on_closing():
             try:
-                # Detener cualquier proceso en ejecución
-                if hasattr(app, 'panel_edicion_visible') and app.panel_edicion_visible:
-                    app.cerrar_panel_edicion()
-                root.destroy()
+                # Llamar al método de cerrar ventana que maneja todo correctamente
+                app.cerrar_ventana()
             except:
                 root.destroy()
         

@@ -18,8 +18,11 @@ class ConfigUI:
         self.root.geometry("600x980") 
         self.root.resizable(False, False)
         
+        # Manejar cierre de ventana para evitar problemas
+        self.root.protocol("WM_DELETE_WINDOW", self.cerrar_ventana)
+        
         self.colors = {
-            'bg': '#121212', 'card': '#1e1e1e', 'accent': '#9c27b0', 
+            'bg': '#121212', 'card': '#1e1e1e', 'accent': '#00a8ff', 
             'text': '#ffffff', 'border': '#333333', 'success': '#00db84',
             'mp_blue': '#009ee3', 'pw_red': '#ee2e24', 'modo_green': '#5cb85c',
             'warning': '#f39c12', 'afip_blue': '#005b96'
@@ -32,21 +35,59 @@ class ConfigUI:
 
     @staticmethod
     def _db_flag_activo(valor):
-        """Convierte flags de DB (0/1, bool, str) a bool real."""
-        if isinstance(valor, bool):
-            return valor
-        if valor is None:
-            return False
-        if isinstance(valor, (int, float)):
-            return int(valor) == 1
+        if isinstance(valor, bool): return valor
+        if valor is None: return False
+        if isinstance(valor, (int, float)): return int(valor) == 1
         return str(valor).strip().lower() in ("1", "true", "t", "si", "sí", "yes", "y", "on")
 
     def configurar_estilo(self):
         style = ttk.Style()
         style.theme_use('clam')
-        style.configure("TNotebook", background=self.colors['bg'], borderwidth=0)
-        style.configure("TNotebook.Tab", background=self.colors['card'], foreground="#888", padding=[12, 8], font=('Segoe UI', 9))
-        style.map("TNotebook.Tab", background=[("selected", self.colors['accent'])], foreground=[("selected", "white")])
+
+        style.configure(
+            "TNotebook",
+            background=self.colors['bg'],
+            borderwidth=0
+        )
+
+        style.configure(
+            "TNotebook.Tab",
+            background=self.colors['card'],
+            foreground="#888",
+            padding=[12, 8],
+            font=('Segoe UI', 9)
+        )
+
+        style.map(
+            "TNotebook.Tab",
+            background=[("selected", self.colors['accent'])],
+            foreground=[("selected", "white")]
+        )
+        
+        # Configurar estilo para Entry y Combobox con color de selección celeste
+        style.configure("TEntry", 
+                        fieldbackground=self.colors['card'], 
+                        foreground="white", 
+                        borderwidth=0,
+                        insertcolor=self.colors['accent'])
+        
+        style.map("TEntry",
+                  focuscolor=[("focus", self.colors['accent'])],
+                  lightcolor=[("focus", self.colors['accent'])],
+                  darkcolor=[("focus", self.colors['accent'])])
+        
+        style.configure("TCombobox", 
+                        fieldbackground=self.colors['card'], 
+                        foreground="white", 
+                        borderwidth=0,
+                        arrowbackground=self.colors['card'])
+        
+        style.map("TCombobox",
+                  focuscolor=[("focus", self.colors['accent'])],
+                  lightcolor=[("focus", self.colors['accent'])],
+                  darkcolor=[("focus", self.colors['accent'])],
+                  selectbackground=[("readonly", self.colors['accent'])],
+                  selectforeground=[("readonly", "white")])
 
     def init_ui(self):
         header = tk.Frame(self.root, bg=self.colors['bg'], pady=15)
@@ -65,7 +106,7 @@ class ConfigUI:
         self.setup_tab_afip()
 
         self.tab_ventas = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
-        self.notebook.add(self.tab_ventas, text=" 🛒 VENTAS ")
+        self.notebook.add(self.tab_ventas, text=" � VENTAS ")
         self.setup_tab_ventas()
 
         self.tab_paths = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
@@ -77,8 +118,12 @@ class ConfigUI:
         self.setup_tab_pagos()
 
         self.tab_ia = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
-        self.notebook.add(self.tab_ia, text=" 🤖 INTELIGENCIA ARTIFICIAL ")
+        self.notebook.add(self.tab_ia, text=" 🤖 IA ")
         self.setup_tab_ia()
+
+        self.tab_dlna = tk.Frame(self.notebook, bg=self.colors['bg'], padx=20, pady=20)
+        self.notebook.add(self.tab_dlna, text=" 📺 DLNA ")
+        self.setup_tab_dlna()
 
         btn_frame = tk.Frame(self.root, bg=self.colors['bg'], pady=20)
         btn_frame.pack(fill=tk.X)
@@ -91,7 +136,6 @@ class ConfigUI:
         self.ent_eslogan = self.crear_campo(self.tab_empresa, "Eslogan / Subtítulo:")
         self.ent_direccion = self.crear_campo(self.tab_empresa, "Dirección Comercial:")
         self.ent_iva_cond = self.crear_campo(self.tab_empresa, "Condición IVA:")
-        
         tax_frame = tk.Frame(self.tab_empresa, bg=self.colors['bg'])
         tax_frame.pack(fill=tk.X)
         self.ent_iva = self.crear_campo_pequeno(tax_frame, "IVA (%)", side=tk.LEFT)
@@ -105,16 +149,12 @@ class ConfigUI:
         self.var_siempre_fiscal = tk.BooleanVar()
         tk.Checkbutton(pref_frame, text="SOLICITAR FACTURA ARCA POR DEFECTO", variable=self.var_siempre_fiscal, 
                        bg=self.colors['card'], fg="white", selectcolor=self.colors['bg']).pack(anchor="w")
-
-        tk.Label(self.tab_afip, text="CREDENCIALES FISCALES", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg=self.colors['afip_blue']).pack(anchor="w")
         self.ent_cuit = self.crear_campo(self.tab_afip, "CUIT (solo números):")
         self.ent_pto_vta = self.crear_campo(self.tab_afip, "Punto de Venta:")
-        
         tk.Label(self.tab_afip, text="Certificado AFIP (.crt):", bg=self.colors['bg'], fg="#aaa").pack(anchor="w", pady=(10, 0))
         self.ent_afip_cert = self.crear_campo_archivo_especifico(self.tab_afip, [("Certificado", "*.crt")])
         tk.Label(self.tab_afip, text="Llave Privada (.key):", bg=self.colors['bg'], fg="#aaa").pack(anchor="w", pady=(10, 0))
         self.ent_afip_key = self.crear_campo_archivo_especifico(self.tab_afip, [("Llave Privada", "*.key")])
-        
         env_frame = tk.Frame(self.tab_afip, bg=self.colors['bg'], pady=10)
         env_frame.pack(fill=tk.X)
         self.var_afip_prod = tk.BooleanVar()
@@ -122,16 +162,28 @@ class ConfigUI:
         self.var_afip_mock = tk.BooleanVar()
         tk.Checkbutton(env_frame, text="USAR MOCK (SIMULADO)", variable=self.var_afip_mock, bg=self.colors['bg'], fg=self.colors['warning']).pack(side=tk.RIGHT)
 
-    def setup_tab_ventas(self):
-        self.ent_moneda = self.crear_campo(self.tab_ventas, "Moneda ($):")
-        self.var_fraccion = tk.BooleanVar()
-        tk.Checkbutton(self.tab_ventas, text="HABILITAR VENTAS POR PESO", variable=self.var_fraccion, bg=self.colors['bg'], fg="white").pack(anchor="w", pady=10)
+    def setup_tab_ia(self):
+        tk.Label(self.tab_ia, text="CONFIGURACIÓN DE IA", font=('Segoe UI', 12, 'bold'), bg=self.colors['bg'], fg=self.colors['accent']).pack(pady=(0, 20))
+        self.ent_ia_api_key = self.crear_campo(self.tab_ia, "API Key (OpenAI/otros):")
+        self.ent_ia_ruta_imagenes = self.crear_campo_archivo(self.tab_ia)
+        self.combo_ia_estilo = ttk.Combobox(self.tab_ia, values=["Modern", "Vintage", "Minimalist", "Bold", "Elegant", "Playful"], font=('Segoe UI', 10), state="readonly")
+        self.combo_ia_estilo.pack(fill=tk.X, pady=5); self.combo_ia_estilo.set("Modern")
+        self.combo_ia_tamano = ttk.Combobox(self.tab_ia, values=["1080x1080", "1920x1080", "1080x1920", "1200x630", "800x800"], font=('Segoe UI', 10), state="readonly")
+        self.combo_ia_tamano.pack(fill=tk.X, pady=5); self.combo_ia_tamano.set("1080x1080")
+        options_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=15, pady=15)
+        options_frame.pack(fill=tk.X, pady=(20, 0))
+        self.var_ia_activo = tk.BooleanVar()
+        tk.Checkbutton(options_frame, text="HABILITAR GENERADOR IA", variable=self.var_ia_activo, bg=self.colors['card'], fg="white", selectcolor=self.colors['bg']).pack(anchor="w")
+        self.var_ia_auto_guardar = tk.BooleanVar()
+        tk.Checkbutton(options_frame, text="GUARDAR AUTOMÁTICAMENTE", variable=self.var_ia_auto_guardar, bg=self.colors['card'], fg="white", selectcolor=self.colors['bg']).pack(anchor="w", pady=(10, 0))
 
-    def setup_tab_paths(self):
-        tk.Label(self.tab_paths, text="Ruta Tickets PDF:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w")
-        self.ent_ruta_tickets = self.crear_campo_archivo(self.tab_paths)
-        tk.Label(self.tab_paths, text="Ruta Imágenes Productos:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w", pady=(15,0))
-        self.ent_ruta_imgs = self.crear_campo_archivo(self.tab_paths)
+    def setup_tab_ventas(self):
+        tk.Label(self.tab_ventas, text="CONFIGURACIÓN DE VENTAS", font=('Segoe UI', 12, 'bold'), bg=self.colors['bg'], fg=self.colors['success']).pack(pady=(0, 20))
+        self.ent_moneda = self.crear_campo(self.tab_ventas, "Moneda ($):")
+        options_frame = tk.Frame(self.tab_ventas, bg=self.colors['card'], padx=15, pady=15)
+        options_frame.pack(fill=tk.X, pady=(20, 0))
+        self.var_fraccion = tk.BooleanVar()
+        tk.Checkbutton(options_frame, text="HABILITAR VENTAS POR PESO", variable=self.var_fraccion, bg=self.colors['card'], fg="white", selectcolor=self.colors['bg']).pack(anchor="w")
 
     def setup_tab_pagos(self):
         group_mp = tk.LabelFrame(self.tab_pagos, text=" MERCADO PAGO ", bg=self.colors['bg'], fg=self.colors['mp_blue'], padx=10, pady=5)
@@ -139,34 +191,60 @@ class ConfigUI:
         self.ent_mp_token = self.crear_campo(group_mp, "Access Token:")
         self.ent_mp_user = self.crear_campo(group_mp, "User ID:")
         self.ent_mp_external = self.crear_campo(group_mp, "External ID (Caja):")
-        
         group_modo = tk.LabelFrame(self.tab_pagos, text=" MODO ", bg=self.colors['bg'], fg=self.colors['modo_green'], padx=10, pady=5)
         group_modo.pack(fill=tk.X, pady=5)
         self.ent_modo_key = self.crear_campo(group_modo, "Modo API Key:")
         self.var_modo_sandbox = tk.BooleanVar()
         tk.Checkbutton(group_modo, text="Modo Sandbox", variable=self.var_modo_sandbox, bg=self.colors['bg'], fg="white").pack(anchor="w")
-
         group_pw = tk.LabelFrame(self.tab_pagos, text=" PAYWAY ", bg=self.colors['bg'], fg=self.colors['pw_red'], padx=10, pady=5)
         group_pw.pack(fill=tk.X, pady=5)
         self.ent_pw_key = self.crear_campo(group_pw, "PayWay API Key:")
         self.ent_pw_merchant = self.crear_campo(group_pw, "Merchant ID:")
 
+    def setup_tab_paths(self):
+        tk.Label(self.tab_paths, text="Ruta Tickets PDF:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w")
+        self.ent_ruta_tickets = self.crear_campo_archivo(self.tab_paths)
+        tk.Label(self.tab_paths, text="Ruta Imágenes Productos:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w", pady=(15,0))
+        self.ent_ruta_imgs = self.crear_campo_archivo(self.tab_paths)
+
+    def setup_tab_dlna(self):
+        tk.Label(self.tab_dlna, text="CONFIGURACIÓN DLNA", font=('Segoe UI', 12, 'bold'), bg=self.colors['bg'], fg=self.colors['accent']).pack(pady=(0, 20))
+        
+        tk.Label(self.tab_dlna, text="Ruta Banners:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w")
+        self.ent_dlna_ruta_banners = self.crear_campo_archivo(self.tab_dlna)
+        
+        tk.Label(self.tab_dlna, text="Ruta Imágenes:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w", pady=(15, 0))
+        self.ent_dlna_ruta_imagenes = self.crear_campo_archivo(self.tab_dlna)
+        
+        tk.Label(self.tab_dlna, text="Ruta Videos:", bg=self.colors['bg'], fg="#aaa").pack(anchor="w", pady=(15, 0))
+        self.ent_dlna_ruta_videos = self.crear_campo_archivo(self.tab_dlna)
+        
+        options_frame = tk.Frame(self.tab_dlna, bg=self.colors['card'], padx=15, pady=15)
+        options_frame.pack(fill=tk.X, pady=(20, 0))
+        self.var_dlna_activo = tk.BooleanVar()
+        tk.Checkbutton(options_frame, text="HABILITAR SERVIDOR DLNA", variable=self.var_dlna_activo, bg=self.colors['card'], fg="white", selectcolor=self.colors['bg']).pack(anchor="w")
+        self.var_dlna_auto_start = tk.BooleanVar()
+        tk.Checkbutton(options_frame, text="INICIAR AUTOMÁTICAMENTE", variable=self.var_dlna_auto_start, bg=self.colors['card'], fg="white", selectcolor=self.colors['bg']).pack(anchor="w", pady=(10, 0))
+
     def crear_campo(self, master, label_text):
         tk.Label(master, text=label_text, bg=master['bg'], fg="#aaa", font=('Segoe UI', 9)).pack(anchor="w", pady=(5, 2))
-        entry = tk.Entry(master, font=('Segoe UI', 10), bg=self.colors['card'], fg="white", borderwidth=0, insertbackground="white")
+        entry = tk.Entry(master, font=('Segoe UI', 10), bg=self.colors['card'], fg="white", borderwidth=0, insertbackground="white",
+                        highlightthickness=2, highlightbackground=self.colors['border'], highlightcolor=self.colors['accent'])
         entry.pack(fill=tk.X, ipady=6); tk.Frame(master, height=1, bg=self.colors['border']).pack(fill=tk.X)
         return entry
 
     def crear_campo_archivo(self, master):
         container = tk.Frame(master, bg=master['bg']); container.pack(fill=tk.X, pady=5)
-        entry = tk.Entry(container, font=('Segoe UI', 10), bg=self.colors['card'], fg="white", borderwidth=0)
+        entry = tk.Entry(container, font=('Segoe UI', 10), bg=self.colors['card'], fg="white", borderwidth=0, insertbackground="white",
+                        highlightthickness=2, highlightbackground=self.colors['border'], highlightcolor=self.colors['accent'])
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=6)
         tk.Button(container, text=" ... ", bg=self.colors['border'], fg="white", command=lambda e=entry: self.seleccionar_directorio(e)).pack(side=tk.RIGHT, padx=5)
         return entry
 
     def crear_campo_archivo_especifico(self, master, tipos):
         container = tk.Frame(master, bg=master['bg']); container.pack(fill=tk.X, pady=5)
-        entry = tk.Entry(container, font=('Segoe UI', 10), bg=self.colors['card'], fg="white", borderwidth=0)
+        entry = tk.Entry(container, font=('Segoe UI', 10), bg=self.colors['card'], fg="white", borderwidth=0, insertbackground="white",
+                        highlightthickness=2, highlightbackground=self.colors['border'], highlightcolor=self.colors['accent'])
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=6)
         tk.Button(container, text=" 📁 Buscar ", font=('Segoe UI', 8), bg=self.colors['border'], fg="white", command=lambda e=entry, t=tipos: self.seleccionar_archivo(e, t)).pack(side=tk.RIGHT, padx=5)
         return entry
@@ -183,7 +261,8 @@ class ConfigUI:
         frame = tk.Frame(master, bg=master['bg'])
         frame.pack(side=side, fill=tk.X, expand=True, padx=5)
         tk.Label(frame, text=label_text, bg=master['bg'], fg="#aaa", font=('Segoe UI', 9)).pack(anchor="w")
-        entry = tk.Entry(frame, font=('Segoe UI', 10, 'bold'), bg=self.colors['card'], fg=self.colors['success'], borderwidth=0, justify="center")
+        entry = tk.Entry(frame, font=('Segoe UI', 10, 'bold'), bg=self.colors['card'], fg=self.colors['success'], borderwidth=0, justify="center", insertbackground="white",
+                        highlightthickness=2, highlightbackground=self.colors['border'], highlightcolor=self.colors['accent'])
         entry.pack(fill=tk.X, ipady=6)
         return entry
 
@@ -200,21 +279,30 @@ class ConfigUI:
                     self.ent_direccion.insert(0, res.get('direccion', ""))
                     self.ent_iva_cond.insert(0, res.get('condicion_iva', ""))
                     self.ent_iva.insert(0, str(res.get('impuesto', "21.0")))
-                    self.ent_iibb.insert(0, str(res.get('ingresos_brutos', "0.0"))) # Respetamos columna
-                    self.ent_ganancia.insert(0, str(res.get('ganancia_sugerida', "0.0"))) # Respetamos columna
-                    
+                    self.ent_iibb.insert(0, str(res.get('ingresos_brutos', "0.0")))
+                    self.ent_ganancia.insert(0, str(res.get('ganancia_sugerida', "0.0")))
                     pv = res.get('punto_vta') if res.get('punto_vta') is not None else res.get('punto_venta', "1")
                     self.ent_pto_vta.insert(0, str(pv))
-                    
                     self.ent_afip_cert.insert(0, res.get('afip_cert', ""))
                     self.ent_afip_key.insert(0, res.get('afip_key', ""))
                     self.var_afip_prod.set(bool(res.get('afip_prod', False)))
                     self.var_afip_mock.set(bool(res.get('afip_mock', False)))
                     self.var_siempre_fiscal.set(bool(res.get('siempre_fiscal', False)))
                     self.ent_moneda.insert(0, res.get('moneda', "$"))
-                    self.var_fraccion.set(bool(res.get('permitir_fraccion', False))) # Respetamos columna
+                    self.var_fraccion.set(bool(res.get('permitir_fraccion', False)))
                     self.ent_ruta_tickets.insert(0, res.get('ruta_tickets', ""))
                     self.ent_ruta_imgs.insert(0, res.get('ruta_imagenes', ""))
+                    self.ent_dlna_ruta_banners.insert(0, res.get('dlna_ruta_banners', ""))
+                    self.ent_dlna_ruta_imagenes.insert(0, res.get('dlna_ruta_imagenes', ""))
+                    self.ent_dlna_ruta_videos.insert(0, res.get('dlna_ruta_videos', ""))
+                    self.var_dlna_activo.set(bool(res.get('dlna_activo', False)))
+                    self.var_dlna_auto_start.set(bool(res.get('dlna_auto_start', False)))
+                    self.ent_ia_api_key.insert(0, res.get('ia_api_key', ""))
+                    self.ent_ia_ruta_imagenes.insert(0, res.get('ia_ruta_imagenes', "./imagenes_generadas"))
+                    self.combo_ia_estilo.set(res.get('ia_estilo_defecto', 'Modern'))
+                    self.combo_ia_tamano.set(res.get('ia_tamano_defecto', '1080x1080'))
+                    self.var_ia_activo.set(bool(res.get('ia_activo', False)))
+                    self.var_ia_auto_guardar.set(bool(res.get('ia_auto_guardar', True)))
 
                 cursor.execute("SELECT * FROM config_pagos WHERE empresa_id=%s OR id=1 LIMIT 1", (self.empresa_id,))
                 pagos = cursor.fetchone()
@@ -227,7 +315,17 @@ class ConfigUI:
                     self.ent_pw_key.insert(0, pagos.get('pw_api_key', ""))
                     self.ent_pw_merchant.insert(0, pagos.get('pw_merchant_id', ""))
             conn.close()
-        except Exception as e: print(f"Error carga: {e}")
+        except Exception as e: 
+            print(f"Error carga: {e}")
+            messagebox.showerror("Error", f"Error al cargar datos: {str(e)}")
+    
+    def cerrar_ventana(self):
+        """Manejar el cierre de ventana de forma segura"""
+        try:
+            self.root.quit()
+            self.root.destroy()
+        except:
+            pass
     
     def guardar_todo(self):
         try:
@@ -237,7 +335,10 @@ class ConfigUI:
                          nombre_negocio=%s, eslogan=%s, cuit=%s, direccion=%s, 
                          condicion_iva=%s, impuesto=%s, ingresos_brutos=%s, ganancia_sugerida=%s,
                          punto_vta=%s, afip_cert=%s, afip_key=%s, afip_prod=%s, afip_mock=%s,
-                         siempre_fiscal=%s, moneda=%s, permitir_fraccion=%s, ruta_tickets=%s, ruta_imagenes=%s
+                         siempre_fiscal=%s, moneda=%s, permitir_fraccion=%s,
+                         ruta_tickets=%s, ruta_imagenes=%s, dlna_ruta_banners=%s, dlna_ruta_imagenes=%s, dlna_ruta_videos=%s, 
+                         dlna_activo=%s, dlna_auto_start=%s, ia_api_key=%s, ia_ruta_imagenes=%s, ia_estilo_defecto=%s, 
+                         ia_tamano_defecto=%s, ia_activo=%s, ia_auto_guardar=%s
                          WHERE empresa_id=%s OR id=1"""
                 cursor.execute(sql_negocio, (
                     self.ent_nombre.get(), self.ent_eslogan.get(), self.ent_cuit.get(),
@@ -245,10 +346,13 @@ class ConfigUI:
                     float(self.ent_iibb.get() or 0), float(self.ent_ganancia.get() or 0),
                     int(self.ent_pto_vta.get() or 1), self.ent_afip_cert.get(),
                     self.ent_afip_key.get(), self.var_afip_prod.get(), self.var_afip_mock.get(),
-                    self.var_siempre_fiscal.get(), self.ent_moneda.get(), self.var_fraccion.get(), 
-                    self.ent_ruta_tickets.get(), self.ent_ruta_imgs.get(), self.empresa_id
+                    self.var_siempre_fiscal.get(), self.ent_moneda.get(), self.var_fraccion.get(),
+                    self.ent_ruta_tickets.get(), self.ent_ruta_imgs.get(),
+                    self.ent_dlna_ruta_banners.get(), self.ent_dlna_ruta_imagenes.get(), self.ent_dlna_ruta_videos.get(),
+                    self.var_dlna_activo.get(), self.var_dlna_auto_start.get(),
+                    self.ent_ia_api_key.get(), self.ent_ia_ruta_imagenes.get(), self.combo_ia_estilo.get(),
+                    self.combo_ia_tamano.get(), self.var_ia_activo.get(), self.var_ia_auto_guardar.get(), self.empresa_id
                 ))
-
                 sql_pagos = """UPDATE config_pagos SET 
                          mp_access_token=%s, mp_user_id=%s, mp_external_id=%s, 
                          modo_api_key=%s, modo_sandbox=%s, pw_api_key=%s, pw_merchant_id=%s
@@ -258,228 +362,14 @@ class ConfigUI:
                     self.ent_modo_key.get(), self.var_modo_sandbox.get(),
                     self.ent_pw_key.get(), self.ent_pw_merchant.get(), self.empresa_id
                 ))
-                
                 conn.commit()
             conn.close()
             messagebox.showinfo("Éxito", "Configuración completa guardada.")
+            self.root.quit()
             self.root.destroy()
         except Exception as e: messagebox.showerror("Error", f"No se pudo guardar: {str(e)}")
     
-    def seleccionar_carpeta_imagenes(self):
-        """Seleccionar carpeta para guardar imágenes"""
-        from tkinter import filedialog
-        carpeta = filedialog.askdirectory(title="Seleccionar carpeta para guardar imágenes generadas")
-        if carpeta:
-            self.ent_ruta_imagenes.delete(0, tk.END)
-            self.ent_ruta_imagenes.insert(0, carpeta)
-    
-    def setup_tab_ia(self):
-        """Configuración de Inteligencia Artificial"""
-        tk.Label(self.tab_ia, text="CONFIGURACIÓN DE IA PARA GENERACIÓN DE IMÁGENES", 
-                font=('Segoe UI', 11, 'bold'), bg=self.colors['bg'], fg=self.colors['accent']).pack(anchor="w", pady=(0, 15))
-        
-        # Servicio de IA preferido
-        tk.Label(self.tab_ia, text="Servicio de IA:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
-        ia_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
-        ia_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.var_ia_service = tk.StringVar(value="ideogram")
-        servicios = [("Ideogram AI", "ideogram"), ("DALL-E", "dalle"), ("Stable Diffusion", "stable"), ("Midjourney", "midjourney")]
-        
-        for i, (text, value) in enumerate(servicios):
-            tk.Radiobutton(ia_frame, text=text, variable=self.var_ia_service, value=value,
-                          bg=self.colors['card'], fg="white", selectcolor=self.colors['accent'],
-                          font=('Segoe UI', 9)).pack(anchor="w")
-        
-        # Configuración de prompts
-        tk.Label(self.tab_ia, text="Configuración de Prompts:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
-        prompt_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
-        prompt_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.var_auto_generate = tk.BooleanVar(value=True)
-        tk.Checkbutton(prompt_frame, text="Generar prompt automáticamente al seleccionar producto y promoción", 
-                       variable=self.var_auto_generate, bg=self.colors['card'], fg="white", 
-                       selectcolor=self.colors['accent'], font=('Segoe UI', 9)).pack(anchor="w")
-        
-        # Estilos por defecto
-        tk.Label(self.tab_ia, text="Estilos por Defecto:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
-        estilo_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
-        estilo_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.var_estilo_defecto = tk.StringVar(value="Modern")
-        estilos = ["Modern", "Vibrant", "Minimalist", "Professional", "Creative", "Elegant"]
-        self.combo_estilo_defecto = ttk.Combobox(estilo_frame, textvariable=self.var_estilo_defecto, 
-                                               values=estilos, font=('Segoe UI', 9), state="readonly")
-        self.combo_estilo_defecto.pack(fill=tk.X)
-        
-        # Tamaño por defecto
-        tk.Label(self.tab_ia, text="Tamaño por Defecto:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
-        tamaño_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
-        tamaño_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.var_tamano_defecto = tk.StringVar(value="1080x1080")
-        tamaños = ["1080x1080", "1920x1080", "1080x1920", "1200x630", "800x800"]
-        self.combo_tamano_defecto = ttk.Combobox(tamaño_frame, textvariable=self.var_tamano_defecto, 
-                                               values=tamaños, font=('Segoe UI', 9), state="readonly")
-        self.combo_tamano_defecto.pack(fill=tk.X)
-        
-        # Ruta de guardado de imágenes
-        tk.Label(self.tab_ia, text="Ruta de Guardado de Imágenes:", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
-        ruta_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
-        ruta_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.ent_ruta_imagenes = self.crear_campo(ruta_frame, "Carpeta para guardar imágenes:")
-        
-        # Botón para seleccionar carpeta
-        btn_frame = tk.Frame(ruta_frame, bg=self.colors['card'])
-        btn_frame.pack(fill=tk.X, pady=(5, 0))
-        tk.Button(btn_frame, text="📁 SELECCIONAR CARPETA", bg=self.colors['accent'], fg="white",
-                 font=('Segoe UI', 8, 'bold'), command=self.seleccionar_carpeta_imagenes).pack(side=tk.LEFT)
-        
-        # API Keys (opcional)
-        tk.Label(self.tab_ia, text="Claves de API (Opcional):", font=('Segoe UI', 9, 'bold'), bg=self.colors['bg'], fg="white").pack(anchor="w")
-        api_frame = tk.Frame(self.tab_ia, bg=self.colors['card'], padx=10, pady=10)
-        api_frame.pack(fill=tk.X, pady=(0, 15))
-        
-        self.ent_api_key = self.crear_campo(api_frame, "API Key (si aplica):")
-        self.ent_api_secret = self.crear_campo(api_frame, "API Secret (si aplica):")
-        
-        # Información útil
-        info_frame = tk.Frame(self.tab_ia, bg=self.colors['warning'], padx=10, pady=10)
-        info_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        info_text = """💡 RECOMENDACIONES:
-• Ideogram AI: Gratis, excelente para texto en imágenes
-• DALL-E: Pago, muy alta calidad
-• Stable Diffusion: Gratuito con instalación local
-• Midjourney: Pago, calidad artística superior
-        
-🔗 ENLACES ÚTILES:
-• Ideogram: https://ideogram.ai
-• Hugging Face: https://huggingface.co
-• OpenAI: https://openai.com"""
-        
-        tk.Label(info_frame, text=info_text, bg=self.colors['warning'], fg="white", 
-                font=('Segoe UI', 8), justify=tk.LEFT).pack(anchor="w")
-    
-    def guardar_config_ia(self):
-        """Guardar configuración de IA"""
-        try:
-            conn = get_connection()
-            with conn.cursor() as cursor:
-                # Crear tabla si no existe
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS config_ia (
-                        id INT PRIMARY KEY AUTO_INCREMENT,
-                        empresa_id INT,
-                        ia_service VARCHAR(50),
-                        auto_generate BOOLEAN DEFAULT TRUE,
-                        estilo_defecto VARCHAR(50),
-                        tamano_defecto VARCHAR(20),
-                        ruta_imagenes TEXT,
-                        api_key TEXT,
-                        api_secret TEXT,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-                
-                # Guardar configuración
-                cursor.execute("""
-                    INSERT INTO config_ia (empresa_id, ia_service, auto_generate, estilo_defecto, tamano_defecto, ruta_imagenes, api_key, api_secret)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                    ia_service = VALUES(ia_service),
-                    auto_generate = VALUES(auto_generate),
-                    estilo_defecto = VALUES(estilo_defecto),
-                    tamano_defecto = VALUES(tamano_defecto),
-                    ruta_imagenes = VALUES(ruta_imagenes),
-                    api_key = VALUES(api_key),
-                    api_secret = VALUES(api_secret),
-                    updated_at = CURRENT_TIMESTAMP
-                """, (
-                    self.empresa_id,
-                    self.var_ia_service.get(),
-                    self.var_auto_generate.get(),
-                    self.var_estilo_defecto.get(),
-                    self.var_tamano_defecto.get(),
-                    self.ent_ruta_imagenes.get(),
-                    self.ent_api_key.get(),
-                    self.ent_api_secret.get()
-                ))
-                
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo guardar configuración de IA: {e}")
-            return False
-    
-    def cargar_config_ia(self):
-        """Cargar configuración de IA"""
-        try:
-            conn = get_connection()
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT * FROM config_ia WHERE empresa_id=%s", (self.empresa_id,))
-                config = cursor.fetchone()
-                
-                if config:
-                    self.var_ia_service.set(config.get('ia_service', 'ideogram'))
-                    self.var_auto_generate.set(config.get('auto_generate', True))
-                    self.var_estilo_defecto.set(config.get('estilo_defecto', 'Modern'))
-                    self.var_tamano_defecto.set(config.get('tamano_defecto', '1080x1080'))
-                    self.ent_ruta_imagenes.delete(0, tk.END)
-                    self.ent_ruta_imagenes.insert(0, config.get('ruta_imagenes', './imagenes_generadas'))
-                    self.ent_api_key.delete(0, tk.END)
-                    self.ent_api_key.insert(0, config.get('api_key', ''))
-                    self.ent_api_secret.delete(0, tk.END)
-                    self.ent_api_secret.insert(0, config.get('api_secret', ''))
-                    
-            conn.close()
-        except Exception as e:
-            pass  # Si no hay configuración, usar valores por defecto
-    
-    def guardar_todo(self):
-        """Sobreescribir método para incluir configuración de IA"""
-        try:
-            # Guardar configuraciones existentes
-            # ... (código existente) ...
-            
-            # Guardar configuración de IA
-            self.guardar_config_ia()
-            
-            messagebox.showinfo("Éxito", "Configuración completa guardada.")
-            self.root.destroy()
-        except Exception as e: 
-            messagebox.showerror("Error", f"No se pudo guardar: {str(e)}")
-    
-    
-def ejecutar_config(nombre_negocio="NEXUS", empresa_id=1):
-    """Función principal para ejecutar el módulo de configuración"""
-    try:
-        root = tk.Tk()
-        app = ConfigUI(root, nombre_negocio, empresa_id)
-        
-        # Manejar cierre de ventana
-        def on_closing():
-            try:
-                # Guardar cambios pendientes si es necesario
-                if hasattr(app, 'hay_cambios_pendientes') and app.hay_cambios_pendientes:
-                    if messagebox.askyesno("Cambios pendientes", "¿Desea guardar los cambios antes de salir?"):
-                        app.guardar_todo()
-                root.destroy()
-            except:
-                root.destroy()
-        
-        root.protocol("WM_DELETE_WINDOW", on_closing)
-        root.mainloop()
-        
-    except KeyboardInterrupt:
-        print("\n⚙️ Módulo de configuración cerrado por el usuario")
-    except Exception as e:
-        print(f"❌ Error en módulo de configuración: {e}")
-    finally:
-        # Limpiar recursos si es necesario
-        pass
-
 if __name__ == "__main__":
-    ejecutar_config("NEXUS", 1)
+    root = tk.Tk()
+    app = ConfigUI(root, "NEXUS", 1)
+    root.mainloop()
