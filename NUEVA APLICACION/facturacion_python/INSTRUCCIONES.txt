@@ -1,0 +1,153 @@
+INSTALACIÓN DEL DAEMON DE RECONOCIMIENTO FACIAL
+================================================
+
+Este documento describe el paso a paso para instalar y configurar el daemon de 
+reconocimiento facial en tiempo real para el sistema de facturación.
+
+
+REQUISITOS PREVIOS
+------------------
+- Sistema operativo: Linux (Raspberry Pi OS recomendado)
+- Python 3.8 o superior
+- MySQL/MariaDB
+- Acceso sudo
+- Cámaras IP configuradas en el sistema
+
+
+PASO 1: INSTALAR DEPENDENCIAS DE SISTEMA
+-------------------------------------------
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv libopencv-dev dlib
+
+
+PASO 2: INSTALAR DEPENDENCIAS DE PYTHON
+----------------------------------------
+cd /home/pi/facturacion_python
+pip3 install -r requirements.txt
+
+Las dependencias incluyen:
+- opencv-python: Para captura y procesamiento de video
+- numpy: Para operaciones matemáticas
+- mysql-connector-python: Para conexión a base de datos
+- face-recognition: Para reconocimiento facial
+- Pillow: Para procesamiento de imágenes
+
+
+PASO 3: CONFIGURAR BASE DE DATOS
+---------------------------------
+Asegúrate de que las siguientes tablas existan en tu base de datos:
+
+- camaras: Almacena información de cámaras IP
+- perfiles_faciales: Almacena encodings faciales de clientes
+- personas_riesgo: Almacena perfiles de personas de riesgo
+- detecciones_faciales: Registra detecciones en tiempo real
+- config_alertas: Configuración del sistema de alertas
+
+Configura al menos una cámara en el sistema (módulo Cámaras en la interfaz web).
+
+
+PASO 4: CONFIGURAR RECONOCIMIENTO FACIAL
+-----------------------------------------
+1. Accede a la interfaz web del sistema
+2. Ve a Configuración -> Reconocimiento Facial
+3. Configura las opciones:
+   - Activar alertas de reconocimiento
+   - Notificación con sonido
+   - Notificación en pantalla
+   - Enviar alertas por email
+   - Enviar alertas por WhatsApp
+   - Umbral de confianza (0.0 - 1.0)
+   - Tiempo de grabación (segundos)
+
+
+PASO 5: EJECUTAR SCRIPT DE INSTALACIÓN
+-----------------------------------------
+El script instala el servicio systemd y configura el daemon:
+
+sudo ./install_daemon.sh
+
+Este script:
+- Instala dependencias de Python
+- Crea directorio de logs
+- Instala servicio systemd
+- Habilita el servicio para inicio automático
+- Inicia el daemon
+
+
+PASO 6: VERIFICAR ESTADO DEL SERVICIO
+----------------------------------------
+Verificar que el servicio esté corriendo:
+
+sudo systemctl status face-recognition-daemon
+
+Debería mostrar "active (running)" si está funcionando correctamente.
+
+
+PASO 7: VER LOGS
+-----------------
+Ver logs en tiempo real:
+
+sudo journalctl -u face-recognition-daemon -f
+
+O ver el archivo de logs:
+
+tail -f /var/log/face_recognition_daemon.log
+
+
+COMANDOS ÚTILES
+---------------
+- Iniciar servicio: sudo systemctl start face-recognition-daemon
+- Detener servicio: sudo systemctl stop face-recognition-daemon
+- Reiniciar servicio: sudo systemctl restart face-recognition-daemon
+- Ver estado: sudo systemctl status face-recognition-daemon
+- Ver logs: sudo journalctl -u face-recognition-daemon -f
+- Deshabilitar inicio automático: sudo systemctl disable face-recognition-daemon
+- Habilitar inicio automático: sudo systemctl enable face-recognition-daemon
+
+
+SOLUCIÓN DE PROBLEMAS
+----------------------
+1. El servicio no inicia:
+   - Verificar que MySQL esté corriendo: sudo systemctl status mysql
+   - Verificar configuración de base de datos en config.php
+   - Verificar logs: sudo journalctl -u face-recognition-daemon -n 50
+
+2. No detecta cámaras:
+   - Verificar que las cámaras estén configuradas en la base de datos
+   - Verificar que las cámaras estén activas (activo = 1)
+   - Verificar conectividad de red a las cámaras
+
+3. Error de dependencias:
+   - Reinstalar dependencias: pip3 install -r requirements.txt --force-reinstall
+   - Verificar versión de Python: python3 --version (debe ser 3.8+)
+
+4. Permisos de logs:
+   - Asegurar que el usuario pi tenga permisos: sudo chown pi:pi /var/log/face_recognition_daemon.log
+
+
+CONFIGURACIÓN AVANZADA
+----------------------
+El daemon lee configuración de la tabla config_alertas cada 60 segundos.
+Puedes modificar la configuración en tiempo real desde la interfaz web
+y el daemon la recargará automáticamente.
+
+Para ajustar la frecuencia de procesamiento de frames, edita el archivo
+face_recognition_daemon.py y modifica el valor de time.sleep() en la función
+process_camera (actualmente 0.1 segundos = 10 FPS máximo).
+
+
+NOTAS IMPORTANTES
+-----------------
+- El daemon requiere que las cámaras soporten streaming RTSP o HTTP
+- El reconocimiento facial real requiere que los clientes tengan fotos
+  registradas en el sistema (módulo Clientes)
+- Para detección de comportamiento anómalo, se requiere implementación
+  adicional de análisis de video con IA
+- El daemon consume recursos de CPU y memoria, especialmente con múltiples
+  cámaras activas
+
+
+SOPORTE
+--------
+Para problemas o preguntas, revisa los logs del daemon y verifica la
+configuración en la interfaz web del sistema.

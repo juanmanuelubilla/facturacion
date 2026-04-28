@@ -1,0 +1,22 @@
+[Unit]
+Description=Face Recognition Daemon
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/facturacion_python
+ExecStart=/usr/bin/python3 /home/pi/facturacion_python/face_recognition_daemon.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=face-recognition-daemon
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
