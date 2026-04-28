@@ -16,6 +16,70 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `alertas_comportamiento`
+--
+
+DROP TABLE IF EXISTS `alertas_comportamiento`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `alertas_comportamiento` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `evento_id` int(11) DEFAULT NULL,
+  `tipo_alerta` varchar(50) DEFAULT NULL,
+  `mensaje` text DEFAULT NULL,
+  `notificada` tinyint(1) DEFAULT 0,
+  `fecha_notificacion` timestamp NULL DEFAULT NULL,
+  `empresa_id` int(11) DEFAULT NULL,
+  `activa` tinyint(1) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_evento` (`evento_id`),
+  KEY `idx_empresa_notificada` (`empresa_id`,`notificada`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alertas_comportamiento`
+--
+
+LOCK TABLES `alertas_comportamiento` WRITE;
+/*!40000 ALTER TABLE `alertas_comportamiento` DISABLE KEYS */;
+/*!40000 ALTER TABLE `alertas_comportamiento` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `alertas_seguridad`
+--
+
+DROP TABLE IF EXISTS `alertas_seguridad`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `alertas_seguridad` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `persona_riesgo_id` int(11) NOT NULL,
+  `camara_id` int(11) NOT NULL,
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  `confianza` decimal(3,2) DEFAULT 0.00,
+  `estado` enum('ACTIVA','ATENDIDA','FALSA') DEFAULT 'ACTIVA',
+  `acciones_tomadas` text DEFAULT NULL,
+  `notificaciones_enviadas` text DEFAULT NULL COMMENT 'JSON con canales notificados',
+  `empresa_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_persona_fecha` (`persona_riesgo_id`,`fecha`),
+  KEY `idx_empresa` (`empresa_id`),
+  KEY `idx_estado` (`estado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alertas_seguridad`
+--
+
+LOCK TABLES `alertas_seguridad` WRITE;
+/*!40000 ALTER TABLE `alertas_seguridad` DISABLE KEYS */;
+/*!40000 ALTER TABLE `alertas_seguridad` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `asiento_detalles`
 --
 
@@ -34,7 +98,7 @@ CREATE TABLE `asiento_detalles` (
   KEY `idx_asiento_detalles_cuenta` (`cuenta_id`),
   CONSTRAINT `asiento_detalles_ibfk_1` FOREIGN KEY (`asiento_id`) REFERENCES `asientos_contables` (`id`) ON DELETE CASCADE,
   CONSTRAINT `asiento_detalles_ibfk_2` FOREIGN KEY (`cuenta_id`) REFERENCES `plan_cuentas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=685 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=689 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -379,7 +443,11 @@ INSERT INTO `asiento_detalles` VALUES
 (681,172,1,2000.00,0.00,'Venta de contado'),
 (682,172,25,0.00,1652.89,'Ventas del período'),
 (683,172,29,1200.00,0.00,'Costo de mercaderías vendidas'),
-(684,172,18,0.00,347.11,'IVA 21% ventas');
+(684,172,18,0.00,347.11,'IVA 21% ventas'),
+(685,181,1,4348.00,0.00,'Venta de contado'),
+(686,181,25,0.00,3593.39,'Ventas del período'),
+(687,181,29,2600.00,0.00,'Costo de mercaderías vendidas'),
+(688,181,18,0.00,754.61,'IVA 21% ventas');
 /*!40000 ALTER TABLE `asiento_detalles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -407,7 +475,7 @@ CREATE TABLE `asientos_contables` (
   KEY `idx_asientos_fecha` (`empresa_id`,`fecha`),
   CONSTRAINT `asientos_contables_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
   CONSTRAINT `asientos_contables_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=173 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=182 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -500,8 +568,124 @@ INSERT INTO `asientos_contables` VALUES
 (169,1,81,'2026-04-16','Venta #208 - ','Factura','208',1860.00,1860.00,1,'2026-04-27 19:18:01'),
 (170,1,82,'2026-04-17','Venta #209 - ','Factura','209',1860.00,1860.00,1,'2026-04-27 19:18:01'),
 (171,1,83,'2026-04-24','Venta #210 - ','Factura','210',372.00,372.00,1,'2026-04-27 19:18:01'),
-(172,1,84,'2026-04-27','Venta #211 - ','Factura','211',2000.00,2000.00,1,'2026-04-27 19:18:01');
+(172,1,84,'2026-04-27','Venta #211 - ','Factura','211',2000.00,2000.00,1,'2026-04-27 19:18:01'),
+(173,1,85,'2026-04-27','Venta #242 - ','FACTURA','242',0.00,0.00,1,'2026-04-28 00:13:39'),
+(174,1,86,'2026-04-27','Venta #244 - ','FACTURA','244',47060.00,41600.00,1,'2026-04-28 00:16:17'),
+(175,1,87,'2026-04-27','Venta #245 - ','FACTURA','245',11732.76,10356.00,1,'2026-04-28 01:02:13'),
+(176,1,88,'2026-04-27','Venta #246 - ','FACTURA','246',3930.54,3474.00,1,'2026-04-28 01:09:00'),
+(177,1,89,'2026-04-27','Venta #247 - ','FACTURA','247',7861.08,6948.00,1,'2026-04-28 01:22:08'),
+(178,1,90,'2026-04-27','Venta #248 - ','FACTURA','248',4241.08,3748.00,1,'2026-04-28 01:28:00'),
+(179,1,91,'2026-04-27','Venta #249 - ','FACTURA','249',8171.62,7222.00,1,'2026-04-28 01:28:23'),
+(180,1,92,'2026-04-27','Venta #250 - ','FACTURA','250',7861.08,6948.00,1,'2026-04-28 01:33:35'),
+(181,1,93,'2026-04-27','Venta #250 - ','Factura','250',4348.00,4348.00,1,'2026-04-28 02:55:51');
 /*!40000 ALTER TABLE `asientos_contables` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `asientos_movimientos`
+--
+
+DROP TABLE IF EXISTS `asientos_movimientos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `asientos_movimientos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `asiento_id` int(11) NOT NULL,
+  `cuenta_id` int(11) NOT NULL,
+  `debe` decimal(15,2) DEFAULT 0.00,
+  `haber` decimal(15,2) DEFAULT 0.00,
+  `descripcion` varchar(500) DEFAULT NULL,
+  `creado_en` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_asiento_id` (`asiento_id`),
+  KEY `idx_cuenta_id` (`cuenta_id`),
+  CONSTRAINT `asientos_movimientos_ibfk_1` FOREIGN KEY (`asiento_id`) REFERENCES `asientos_contables` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `asientos_movimientos`
+--
+
+LOCK TABLES `asientos_movimientos` WRITE;
+/*!40000 ALTER TABLE `asientos_movimientos` DISABLE KEYS */;
+INSERT INTO `asientos_movimientos` VALUES
+(1,174,1,26000.00,0.00,'Venta #244','2026-04-28 00:16:17'),
+(2,174,5,5460.00,0.00,'IVA Débito Fiscal #244','2026-04-28 00:16:17'),
+(3,174,4,0.00,26000.00,'Ingreso por Venta #244','2026-04-28 00:16:17'),
+(4,174,6,15600.00,0.00,'Costo Venta #244','2026-04-28 00:16:17'),
+(5,174,3,0.00,15600.00,'Salida Inventario #244','2026-04-28 00:16:17'),
+(6,175,1,6556.00,0.00,'Venta #245','2026-04-28 01:02:13'),
+(7,175,5,1376.76,0.00,'IVA Débito Fiscal #245','2026-04-28 01:02:13'),
+(8,175,4,0.00,6556.00,'Ingreso por Venta #245','2026-04-28 01:02:13'),
+(9,175,6,3800.00,0.00,'Costo Venta #245','2026-04-28 01:02:13'),
+(10,175,3,0.00,3800.00,'Salida Inventario #245','2026-04-28 01:02:13'),
+(11,176,1,2174.00,0.00,'Venta #246','2026-04-28 01:09:00'),
+(12,176,5,456.54,0.00,'IVA Débito Fiscal #246','2026-04-28 01:09:00'),
+(13,176,4,0.00,2174.00,'Ingreso por Venta #246','2026-04-28 01:09:00'),
+(14,176,6,1300.00,0.00,'Costo Venta #246','2026-04-28 01:09:00'),
+(15,176,3,0.00,1300.00,'Salida Inventario #246','2026-04-28 01:09:00'),
+(16,177,1,4348.00,0.00,'Venta #247','2026-04-28 01:22:08'),
+(17,177,5,913.08,0.00,'IVA Débito Fiscal #247','2026-04-28 01:22:08'),
+(18,177,4,0.00,4348.00,'Ingreso por Venta #247','2026-04-28 01:22:08'),
+(19,177,6,2600.00,0.00,'Costo Venta #247','2026-04-28 01:22:08'),
+(20,177,3,0.00,2600.00,'Salida Inventario #247','2026-04-28 01:22:08'),
+(21,178,1,2348.00,0.00,'Venta #248','2026-04-28 01:28:00'),
+(22,178,5,493.08,0.00,'IVA Débito Fiscal #248','2026-04-28 01:28:00'),
+(23,178,4,0.00,2348.00,'Ingreso por Venta #248','2026-04-28 01:28:00'),
+(24,178,6,1400.00,0.00,'Costo Venta #248','2026-04-28 01:28:00'),
+(25,178,3,0.00,1400.00,'Salida Inventario #248','2026-04-28 01:28:00'),
+(26,179,1,4522.00,0.00,'Venta #249','2026-04-28 01:28:23'),
+(27,179,5,949.62,0.00,'IVA Débito Fiscal #249','2026-04-28 01:28:23'),
+(28,179,4,0.00,4522.00,'Ingreso por Venta #249','2026-04-28 01:28:23'),
+(29,179,6,2700.00,0.00,'Costo Venta #249','2026-04-28 01:28:23'),
+(30,179,3,0.00,2700.00,'Salida Inventario #249','2026-04-28 01:28:23'),
+(31,180,1,4348.00,0.00,'Venta #250','2026-04-28 01:33:35'),
+(32,180,5,913.08,0.00,'IVA Débito Fiscal #250','2026-04-28 01:33:35'),
+(33,180,4,0.00,4348.00,'Ingreso por Venta #250','2026-04-28 01:33:35'),
+(34,180,6,2600.00,0.00,'Costo Venta #250','2026-04-28 01:33:35'),
+(35,180,3,0.00,2600.00,'Salida Inventario #250','2026-04-28 01:33:35');
+/*!40000 ALTER TABLE `asientos_movimientos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `avisos`
+--
+
+DROP TABLE IF EXISTS `avisos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `avisos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `cliente_id` int(11) DEFAULT NULL,
+  `titulo` varchar(200) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `tipo_aviso` enum('perdido','encontrado','mascota','servicio','otro') DEFAULT 'otro',
+  `imagen` varchar(500) DEFAULT NULL,
+  `prompt_ia` text DEFAULT NULL,
+  `generador_ia` varchar(50) DEFAULT NULL,
+  `enviado_banner` tinyint(1) DEFAULT 0,
+  `fecha_creacion` datetime DEFAULT current_timestamp(),
+  `fecha_expiracion` datetime DEFAULT NULL,
+  `activo` tinyint(1) DEFAULT 1,
+  `telefono_contacto` varchar(50) DEFAULT NULL,
+  `email_contacto` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa` (`empresa_id`),
+  KEY `idx_cliente` (`cliente_id`),
+  KEY `idx_activo` (`activo`),
+  KEY `idx_tipo` (`tipo_aviso`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `avisos`
+--
+
+LOCK TABLES `avisos` WRITE;
+/*!40000 ALTER TABLE `avisos` DISABLE KEYS */;
+/*!40000 ALTER TABLE `avisos` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -522,7 +706,7 @@ CREATE TABLE `banners` (
   `creado_en` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -531,6 +715,8 @@ CREATE TABLE `banners` (
 
 LOCK TABLES `banners` WRITE;
 /*!40000 ALTER TABLE `banners` DISABLE KEYS */;
+INSERT INTO `banners` VALUES
+(2,1,'Promo: Coca-Cola','files/empresa_1/banners/2026/04/20260427_224448_56dd81a7.jpeg','2026-05-01',30,1,'2026-04-28 01:44:51','2026-04-28 01:44:51');
 /*!40000 ALTER TABLE `banners` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -559,6 +745,41 @@ CREATE TABLE `caja` (
 LOCK TABLES `caja` WRITE;
 /*!40000 ALTER TABLE `caja` DISABLE KEYS */;
 /*!40000 ALTER TABLE `caja` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `camaras`
+--
+
+DROP TABLE IF EXISTS `camaras`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `camaras` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `ip` varchar(45) NOT NULL,
+  `puerto` int(11) DEFAULT 554,
+  `usuario` varchar(50) DEFAULT NULL,
+  `password` varchar(100) DEFAULT NULL,
+  `tipo` varchar(20) DEFAULT 'RTSP',
+  `marca` varchar(50) DEFAULT NULL,
+  `modelo` varchar(50) DEFAULT NULL,
+  `ruta_stream` varchar(255) DEFAULT NULL,
+  `activo` tinyint(1) DEFAULT 1,
+  `empresa_id` int(11) NOT NULL,
+  `fecha_creacion` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa` (`empresa_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `camaras`
+--
+
+LOCK TABLES `camaras` WRITE;
+/*!40000 ALTER TABLE `camaras` DISABLE KEYS */;
+/*!40000 ALTER TABLE `camaras` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -626,11 +847,14 @@ CREATE TABLE `clientes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `empresa_id` int(11) NOT NULL DEFAULT 1,
   `nombre` varchar(255) DEFAULT NULL,
+  `apellido` varchar(255) DEFAULT NULL,
   `documento` varchar(50) DEFAULT NULL,
   `tipo_documento` varchar(20) DEFAULT NULL,
   `condicion_iva` varchar(50) DEFAULT NULL,
   `telefono` varchar(30) DEFAULT NULL,
   `whatsapp` varchar(30) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `foto_perfil` varchar(255) DEFAULT NULL COMMENT 'Ruta a la foto para reconocimiento facial',
   `acepta_whatsapp` tinyint(1) NOT NULL DEFAULT 0,
   `comentarios` text DEFAULT NULL,
   `creado_en` datetime DEFAULT current_timestamp(),
@@ -647,7 +871,7 @@ CREATE TABLE `clientes` (
 LOCK TABLES `clientes` WRITE;
 /*!40000 ALTER TABLE `clientes` DISABLE KEYS */;
 INSERT INTO `clientes` VALUES
-(1,1,'Juan Manuel Ubilla','20-25847281-1','DNI','Responsable Inscripto',NULL,NULL,0,NULL,'2026-04-14 22:52:23',NULL,NULL);
+(1,1,'Juan Manuel','Ubilla','20-25847281-1','DNI','Responsable Inscripto','','','',NULL,0,'','2026-04-14 22:52:23','','');
 /*!40000 ALTER TABLE `clientes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -721,6 +945,101 @@ INSERT INTO `comprobante_afip` VALUES
 (10,1,209,11,1,43645536,NULL,'2026-04-17','APROBADO','{\"cae\": null, \"nro_cbte\": 0, \"resultado\": \"E\", \"error\": \"0\"}','DEV','2026-04-17 13:52:54'),
 (11,1,210,11,1,92006463,NULL,'2026-04-24','APROBADO','{\"cae\": null, \"nro_cbte\": 0, \"resultado\": \"E\", \"error\": \"0\"}','DEV','2026-04-24 19:27:27');
 /*!40000 ALTER TABLE `comprobante_afip` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `config_alertas`
+--
+
+DROP TABLE IF EXISTS `config_alertas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config_alertas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `alertas_activas` tinyint(1) DEFAULT 1,
+  `notificacion_sonido` tinyint(1) DEFAULT 1,
+  `notificacion_pantalla` tinyint(1) DEFAULT 1,
+  `email_alerta` tinyint(1) DEFAULT 0,
+  `whatsapp_alerta` tinyint(1) DEFAULT 0,
+  `umbral_confianza` decimal(3,2) DEFAULT 0.80,
+  `tiempo_grabacion_seg` int(11) DEFAULT 60,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `empresa_id` (`empresa_id`),
+  KEY `idx_empresa` (`empresa_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `config_alertas`
+--
+
+LOCK TABLES `config_alertas` WRITE;
+/*!40000 ALTER TABLE `config_alertas` DISABLE KEYS */;
+/*!40000 ALTER TABLE `config_alertas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `config_camara`
+--
+
+DROP TABLE IF EXISTS `config_camara`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config_camara` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `grabar_ventas` tinyint(1) DEFAULT 1,
+  `deteccion_movimiento` tinyint(1) DEFAULT 1,
+  `calidad_video` varchar(10) DEFAULT '720p',
+  `duracion_grabacion` int(11) DEFAULT 30,
+  `almacenamiento_maximo` int(11) DEFAULT 1000 COMMENT 'MB',
+  `horario_inicio` time DEFAULT '08:00:00',
+  `horario_fin` time DEFAULT '22:00:00',
+  `alertas_fuera_horario` tinyint(1) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `empresa_id` (`empresa_id`),
+  KEY `idx_empresa` (`empresa_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `config_camara`
+--
+
+LOCK TABLES `config_camara` WRITE;
+/*!40000 ALTER TABLE `config_camara` DISABLE KEYS */;
+/*!40000 ALTER TABLE `config_camara` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `config_ia`
+--
+
+DROP TABLE IF EXISTS `config_ia`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `config_ia` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `generador_defecto` varchar(50) DEFAULT 'dalle',
+  `api_key_dalle` varchar(500) DEFAULT NULL,
+  `api_key_stable` varchar(500) DEFAULT NULL,
+  `api_key_midjourney` varchar(500) DEFAULT NULL,
+  `url_stable` varchar(500) DEFAULT NULL,
+  `url_midjourney` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa` (`empresa_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `config_ia`
+--
+
+LOCK TABLES `config_ia` WRITE;
+/*!40000 ALTER TABLE `config_ia` DISABLE KEYS */;
+/*!40000 ALTER TABLE `config_ia` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -902,6 +1221,40 @@ INSERT INTO `cupones` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `detecciones_faciales`
+--
+
+DROP TABLE IF EXISTS `detecciones_faciales`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `detecciones_faciales` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `perfil_id` int(11) DEFAULT NULL COMMENT 'ID de perfil facial si es cliente',
+  `persona_riesgo_id` int(11) DEFAULT NULL COMMENT 'ID de persona de riesgo si aplica',
+  `camara_id` int(11) NOT NULL,
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  `confianza` decimal(3,2) DEFAULT 0.00,
+  `tipo_deteccion` enum('CLIENTE','RIESGO','DESCONOCIDO') DEFAULT 'DESCONOCIDO',
+  `venta_id` int(11) DEFAULT NULL COMMENT 'Vinculado con venta si aplica',
+  `empresa_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_camara_fecha` (`camara_id`,`fecha`),
+  KEY `idx_empresa` (`empresa_id`),
+  KEY `idx_tipo_deteccion` (`tipo_deteccion`),
+  KEY `idx_venta` (`venta_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `detecciones_faciales`
+--
+
+LOCK TABLES `detecciones_faciales` WRITE;
+/*!40000 ALTER TABLE `detecciones_faciales` DISABLE KEYS */;
+/*!40000 ALTER TABLE `detecciones_faciales` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `empresas`
 --
 
@@ -930,6 +1283,75 @@ INSERT INTO `empresas` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `eventos_camara`
+--
+
+DROP TABLE IF EXISTS `eventos_camara`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `eventos_camara` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camara_id` int(11) NOT NULL,
+  `tipo_evento` varchar(20) NOT NULL COMMENT 'movimiento, venta, manual',
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  `archivo_video` varchar(255) DEFAULT NULL,
+  `duracion` int(11) DEFAULT 30 COMMENT 'segundos',
+  `venta_id` int(11) DEFAULT NULL,
+  `thumbnail` varchar(255) DEFAULT NULL,
+  `descripcion` text DEFAULT NULL,
+  `empresa_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_camara_fecha` (`camara_id`,`fecha`),
+  KEY `idx_empresa` (`empresa_id`),
+  KEY `idx_venta` (`venta_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `eventos_camara`
+--
+
+LOCK TABLES `eventos_camara` WRITE;
+/*!40000 ALTER TABLE `eventos_camara` DISABLE KEYS */;
+/*!40000 ALTER TABLE `eventos_camara` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `eventos_comportamiento`
+--
+
+DROP TABLE IF EXISTS `eventos_comportamiento`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `eventos_comportamiento` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camara_id` int(11) DEFAULT NULL,
+  `tipo_evento` varchar(50) DEFAULT NULL COMMENT 'MOVIMIENTO SOSPECHOSO, POSTURA ANOMALA, AGLOMERACION, OBJETO OCULTO',
+  `nivel_riesgo` enum('BAJO','MEDIO','ALTO','CRITICO') DEFAULT 'MEDIO',
+  `descripcion` text DEFAULT NULL,
+  `coordenadas` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'x,y,w,h del área detectada' CHECK (json_valid(`coordenadas`)),
+  `confianza` decimal(3,2) DEFAULT 0.00,
+  `frame_imagen` varchar(255) DEFAULT NULL COMMENT 'URL del frame donde se detectó',
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  `empresa_id` int(11) DEFAULT NULL,
+  `activa` tinyint(1) DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_camara_fecha` (`camara_id`,`fecha`),
+  KEY `idx_empresa_tipo` (`empresa_id`,`tipo_evento`),
+  KEY `idx_riesgo_fecha` (`nivel_riesgo`,`fecha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `eventos_comportamiento`
+--
+
+LOCK TABLES `eventos_comportamiento` WRITE;
+/*!40000 ALTER TABLE `eventos_comportamiento` DISABLE KEYS */;
+/*!40000 ALTER TABLE `eventos_comportamiento` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `finanzas`
 --
 
@@ -950,7 +1372,7 @@ CREATE TABLE `finanzas` (
   PRIMARY KEY (`id`),
   KEY `empresa_id` (`empresa_id`),
   CONSTRAINT `finanzas_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1001,7 +1423,16 @@ INSERT INTO `finanzas` VALUES
 (39,1,'INGRESO','Ventas',1860.00,'Venta #208 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-16','18:07:43',1),
 (40,1,'INGRESO','Ventas',1860.00,'Venta #209 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-17','10:52:54',1),
 (41,1,'INGRESO','Ventas',372.00,'Venta #210 (Cliente: CONSUMIDOR FINAL)','EFECTIVO','2026-04-24','16:27:27',1),
-(42,1,'INGRESO','Ventas',2000.00,'Venta #211','EFECTIVO','2026-04-27','09:28:13',1);
+(42,1,'INGRESO','Ventas',2000.00,'Venta #211','EFECTIVO','2026-04-27','09:28:13',1),
+(71,1,'INGRESO','Ventas',8000.00,'Venta #240','EFECTIVO','2026-04-27','21:10:25',1),
+(73,1,'INGRESO','Ventas',5774.00,'Venta #242','EFECTIVO','2026-04-27','21:13:39',1),
+(75,1,'INGRESO','Ventas',26000.00,'Venta #244','EFECTIVO','2026-04-27','21:16:17',1),
+(76,1,'INGRESO','Ventas',6556.00,'Venta #245','EFECTIVO','2026-04-27','22:02:13',1),
+(77,1,'INGRESO','Ventas',2174.00,'Venta #246','EFECTIVO','2026-04-27','22:09:00',1),
+(78,1,'INGRESO','Ventas',4348.00,'Venta #247','TARJETA','2026-04-27','22:22:08',1),
+(79,1,'INGRESO','Ventas',2348.00,'Venta #248','EFECTIVO','2026-04-27','22:28:00',1),
+(80,1,'INGRESO','Ventas',4522.00,'Venta #249','EFECTIVO','2026-04-27','22:28:23',1),
+(81,1,'INGRESO','Ventas',4348.00,'Venta #250','EFECTIVO','2026-04-27','22:33:34',1);
 /*!40000 ALTER TABLE `finanzas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1082,6 +1513,17 @@ CREATE TABLE `nombre_negocio` (
   `dlna_tipo_servidor` varchar(20) DEFAULT 'local',
   `dlna_ip_servidor` varchar(50) DEFAULT '192.168.1.100',
   `dlna_puerto_servidor` varchar(10) DEFAULT '8200',
+  `whatsapp_sid` varchar(255) DEFAULT NULL,
+  `whatsapp_api_key` varchar(255) DEFAULT NULL,
+  `whatsapp_api_secret` varchar(255) DEFAULT NULL,
+  `whatsapp_phone` varchar(50) DEFAULT NULL,
+  `email_host` varchar(255) DEFAULT NULL,
+  `email_port` int(11) DEFAULT 587,
+  `email_username` varchar(255) DEFAULT NULL,
+  `email_password` varchar(255) DEFAULT NULL,
+  `email_encryption` varchar(20) DEFAULT 'tls',
+  `email_from_name` varchar(255) DEFAULT NULL,
+  `email_from_email` varchar(255) DEFAULT NULL,
   `afip_cuit` varchar(20) DEFAULT NULL,
   `afip_punto_venta` int(11) DEFAULT 0,
   `afip_certificado` text DEFAULT NULL,
@@ -1100,7 +1542,7 @@ CREATE TABLE `nombre_negocio` (
 LOCK TABLES `nombre_negocio` WRITE;
 /*!40000 ALTER TABLE `nombre_negocio` DISABLE KEYS */;
 INSERT INTO `nombre_negocio` VALUES
-(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','files/empresa_1/tickets/',1,1,'files/empresa_1/productos/',0,3,50,1,0,1,'','',0,NULL,0,'Default','Default','Ideogram AI','files/empresa_1/ia/','files/empresa_1/banners/','files/empresa_1/imagenes/','files/empresa_1/videos/',1,1,'remoto','192.168.1.101','8200','',0,'','');
+(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','files/empresa_1/tickets/',1,1,'files/empresa_1/productos/',0,3,50,1,0,1,'','',0,NULL,0,'Default','Default','Ideogram AI','files/empresa_1/ia/','files/empresa_1/banners/','files/empresa_1/imagenes/','files/empresa_1/videos/',1,1,'remoto','192.168.1.101','8200',NULL,NULL,NULL,NULL,NULL,587,NULL,NULL,'tls',NULL,NULL,'',0,'','');
 /*!40000 ALTER TABLE `nombre_negocio` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1134,7 +1576,7 @@ CREATE TABLE `pagos` (
   KEY `idx_external_reference` (`external_reference`),
   KEY `idx_fecha_validacion` (`fecha_validacion`),
   CONSTRAINT `pagos_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=104 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=119 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1222,8 +1664,78 @@ INSERT INTO `pagos` VALUES
 (76,208,'EFECTIVO',1860.00,'2026-04-16 18:07:42',8140.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
 (77,209,'EFECTIVO',1860.00,'2026-04-17 10:52:54',8140.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
 (78,210,'EFECTIVO',372.00,'2026-04-24 16:27:27',9628.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
-(79,211,'EFECTIVO',2000.00,'2026-04-27 09:28:13',0.00,2000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL);
+(79,211,'EFECTIVO',2000.00,'2026-04-27 09:28:13',0.00,2000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(108,240,'EFECTIVO',8000.00,'2026-04-27 21:10:25',12000.00,20000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(110,242,'EFECTIVO',5774.00,'2026-04-27 21:13:39',4226.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(112,244,'EFECTIVO',26000.00,'2026-04-27 21:16:17',4000.00,30000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(113,245,'EFECTIVO',6556.00,'2026-04-27 22:02:13',3444.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(114,246,'EFECTIVO',2174.00,'2026-04-27 22:09:00',7826.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(115,247,'TARJETA',4348.00,'2026-04-27 22:22:08',0.00,4348.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(116,248,'EFECTIVO',2348.00,'2026-04-27 22:28:00',17652.00,20000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(117,249,'EFECTIVO',4522.00,'2026-04-27 22:28:23',5478.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(118,250,'EFECTIVO',4348.00,'2026-04-27 22:33:34',5652.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `pagos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `patrones_sospechosos`
+--
+
+DROP TABLE IF EXISTS `patrones_sospechosos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `patrones_sospechosos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) DEFAULT NULL,
+  `descripcion` text DEFAULT NULL,
+  `tipo_patron` varchar(50) DEFAULT NULL COMMENT 'MOVIMIENTO_RAPIDO, POSTURA_AGACHADA, MIRADA_ALREDEDOR, MANOS_EN_BOLSILLOS',
+  `nivel_riesgo` enum('BAJO','MEDIO','ALTO','CRITICO') DEFAULT 'MEDIO',
+  `activo` tinyint(1) DEFAULT 1,
+  `empresa_id` int(11) DEFAULT NULL,
+  `umbral_confianza` decimal(3,2) DEFAULT 0.70,
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa_tipo` (`empresa_id`,`tipo_patron`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `patrones_sospechosos`
+--
+
+LOCK TABLES `patrones_sospechosos` WRITE;
+/*!40000 ALTER TABLE `patrones_sospechosos` DISABLE KEYS */;
+/*!40000 ALTER TABLE `patrones_sospechosos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `perfiles_faciales`
+--
+
+DROP TABLE IF EXISTS `perfiles_faciales`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `perfiles_faciales` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `cliente_id` int(11) DEFAULT NULL,
+  `face_data` varchar(500) NOT NULL COMMENT 'Datos faciales codificados',
+  `confianza` decimal(3,2) DEFAULT 0.95,
+  `fecha_registro` timestamp NULL DEFAULT current_timestamp(),
+  `ultima_deteccion` timestamp NULL DEFAULT NULL,
+  `empresa_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa` (`empresa_id`),
+  KEY `idx_cliente` (`cliente_id`),
+  KEY `idx_face_data` (`face_data`(100))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `perfiles_faciales`
+--
+
+LOCK TABLES `perfiles_faciales` WRITE;
+/*!40000 ALTER TABLE `perfiles_faciales` DISABLE KEYS */;
+/*!40000 ALTER TABLE `perfiles_faciales` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1256,6 +1768,43 @@ CREATE TABLE `periodos_contables` (
 LOCK TABLES `periodos_contables` WRITE;
 /*!40000 ALTER TABLE `periodos_contables` DISABLE KEYS */;
 /*!40000 ALTER TABLE `periodos_contables` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `personas_riesgo`
+--
+
+DROP TABLE IF EXISTS `personas_riesgo`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `personas_riesgo` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `apellido` varchar(100) DEFAULT NULL,
+  `alias` varchar(100) DEFAULT NULL,
+  `foto` varchar(255) DEFAULT NULL COMMENT 'Ruta a la foto',
+  `tipo_riesgo` enum('ALTO','MEDIO','BAJO') DEFAULT 'MEDIO',
+  `nivel_peligro` int(11) DEFAULT 3 COMMENT '1-10',
+  `descripcion` text DEFAULT NULL COMMENT 'Descripción del riesgo',
+  `modus_operandi` text DEFAULT NULL COMMENT 'Método habitual',
+  `fecha_registro` timestamp NULL DEFAULT current_timestamp(),
+  `ultima_deteccion` timestamp NULL DEFAULT NULL,
+  `activo` tinyint(1) DEFAULT 1,
+  `empresa_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa` (`empresa_id`),
+  KEY `idx_tipo_riesgo` (`tipo_riesgo`),
+  KEY `idx_activo` (`activo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `personas_riesgo`
+--
+
+LOCK TABLES `personas_riesgo` WRITE;
+/*!40000 ALTER TABLE `personas_riesgo` DISABLE KEYS */;
+/*!40000 ALTER TABLE `personas_riesgo` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1338,6 +1887,123 @@ INSERT INTO `plan_cuentas` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `presupuesto_detalles`
+--
+
+DROP TABLE IF EXISTS `presupuesto_detalles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `presupuesto_detalles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `presupuesto_id` int(11) NOT NULL,
+  `producto_id` int(11) NOT NULL,
+  `producto_nombre` varchar(200) NOT NULL,
+  `cantidad` decimal(10,2) NOT NULL DEFAULT 1.00,
+  `precio_unitario` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `iva_porcentaje` decimal(5,2) NOT NULL DEFAULT 21.00,
+  `iva_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  PRIMARY KEY (`id`),
+  KEY `idx_presupuesto_id` (`presupuesto_id`),
+  KEY `idx_producto_id` (`producto_id`),
+  CONSTRAINT `presupuesto_detalles_ibfk_1` FOREIGN KEY (`presupuesto_id`) REFERENCES `presupuestos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `presupuesto_detalles`
+--
+
+LOCK TABLES `presupuesto_detalles` WRITE;
+/*!40000 ALTER TABLE `presupuesto_detalles` DISABLE KEYS */;
+INSERT INTO `presupuesto_detalles` VALUES
+(1,1,4,'Producto ID 4',1.00,174.00,174.00,0.00,0.00,174.00),
+(2,1,3,'Producto ID 3',1.00,2000.00,2000.00,0.00,0.00,2000.00);
+/*!40000 ALTER TABLE `presupuesto_detalles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `presupuesto_seguimiento`
+--
+
+DROP TABLE IF EXISTS `presupuesto_seguimiento`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `presupuesto_seguimiento` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `presupuesto_id` int(11) NOT NULL,
+  `tipo_accion` enum('creado','enviado','visto','aprobado','rechazado','recordatorio','convertido') NOT NULL,
+  `descripcion` text NOT NULL,
+  `fecha_accion` datetime NOT NULL DEFAULT current_timestamp(),
+  `creado_por` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_presupuesto_id` (`presupuesto_id`),
+  KEY `idx_tipo_accion` (`tipo_accion`),
+  KEY `idx_fecha_accion` (`fecha_accion`),
+  CONSTRAINT `presupuesto_seguimiento_ibfk_1` FOREIGN KEY (`presupuesto_id`) REFERENCES `presupuestos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `presupuesto_seguimiento`
+--
+
+LOCK TABLES `presupuesto_seguimiento` WRITE;
+/*!40000 ALTER TABLE `presupuesto_seguimiento` DISABLE KEYS */;
+INSERT INTO `presupuesto_seguimiento` VALUES
+(1,1,'creado','Presupuesto creado exitosamente','2026-04-28 00:05:01',1);
+/*!40000 ALTER TABLE `presupuesto_seguimiento` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `presupuestos`
+--
+
+DROP TABLE IF EXISTS `presupuestos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `presupuestos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `cliente_id` int(11) NOT NULL,
+  `numero_presupuesto` varchar(50) NOT NULL,
+  `titulo` varchar(200) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `iva_porcentaje` decimal(5,2) NOT NULL DEFAULT 21.00,
+  `iva_total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `estado` enum('pendiente','aprobado','rechazado','vencido','convertido') NOT NULL DEFAULT 'pendiente',
+  `validez_dias` int(11) NOT NULL DEFAULT 30,
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp(),
+  `fecha_vencimiento` datetime DEFAULT NULL,
+  `fecha_aprobacion` datetime DEFAULT NULL,
+  `fecha_conversion` datetime DEFAULT NULL,
+  `creado_por` int(11) NOT NULL,
+  `aprobado_por` int(11) DEFAULT NULL,
+  `observaciones` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa_id` (`empresa_id`),
+  KEY `idx_cliente_id` (`cliente_id`),
+  KEY `idx_estado` (`estado`),
+  KEY `idx_fecha_creacion` (`fecha_creacion`),
+  KEY `idx_numero_presupuesto` (`numero_presupuesto`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `presupuestos`
+--
+
+LOCK TABLES `presupuestos` WRITE;
+/*!40000 ALTER TABLE `presupuestos` DISABLE KEYS */;
+INSERT INTO `presupuestos` VALUES
+(1,1,1,'PRES-2026-0001','presupuesto x','rwerwe',0.00,21.00,0.00,0.00,'pendiente',30,'2026-04-28 00:05:01','2026-05-28 00:05:01',NULL,NULL,1,NULL,'');
+/*!40000 ALTER TABLE `presupuestos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `productos`
 --
 
@@ -1347,10 +2013,12 @@ DROP TABLE IF EXISTS `productos`;
 CREATE TABLE `productos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `codigo` varchar(50) DEFAULT NULL,
+  `codigo_barra` varchar(50) DEFAULT NULL,
   `nombre` varchar(255) DEFAULT NULL,
   `descripcion` text DEFAULT NULL,
   `precio` decimal(10,2) DEFAULT NULL,
   `stock` decimal(10,3) NOT NULL DEFAULT 0.000,
+  `permite_fracciones` tinyint(1) DEFAULT 0,
   `activo` tinyint(1) DEFAULT 1,
   `categoria_id` int(11) DEFAULT NULL,
   `tags` varchar(255) DEFAULT NULL,
@@ -1375,12 +2043,12 @@ CREATE TABLE `productos` (
 LOCK TABLES `productos` WRITE;
 /*!40000 ALTER TABLE `productos` DISABLE KEYS */;
 INSERT INTO `productos` VALUES
-(1,'123','Coca-Cola','None',2000.00,1000.000,0,NULL,'','2026-04-04 11:47:18','imagenes/123.png',1200.00,1,1,0),
-(2,'22222','juan','',1860.00,92.000,1,NULL,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,1,0),
-(3,'62345','Coca-Cola','None',2000.00,99.000,1,NULL,'','2026-04-08 12:10:07','imagenes/123.png',1200.00,1,1,0),
-(4,'2542312','axelito','',174.00,0.000,1,NULL,'','2026-04-08 21:41:21','/home/pi/Pictures/Botella_CocaCola.jpg',100.00,1,1,0),
-(6,'12334','juan','',174.00,8.000,1,NULL,NULL,'2026-04-13 18:22:52',NULL,100.00,1,1,0),
-(7,'000000','hola','',1740.00,9.000,1,NULL,NULL,'2026-04-15 11:03:12',NULL,1000.00,1,1,0);
+(1,'123','','Coca-Cola','None',2000.00,1000.000,0,0,NULL,'','2026-04-04 11:47:18','files/empresa_1/productos/20260427_220025_2ef2e7ef.jpg',1200.00,1,1,0),
+(2,'22222',NULL,'juan','',1860.00,90.000,0,1,NULL,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,1,0),
+(3,'62345','','Coca-Cola','None',2000.00,71.000,0,1,NULL,'','2026-04-08 12:10:07','files/empresa_1/productos/20260427_220052_e1f258e5.jpg',1200.00,1,1,0),
+(4,'2542312','','axelito','',174.00,86.000,0,1,NULL,'','2026-04-08 21:41:21','files/empresa_1/productos/20260427_220041_dafef302.jpg',100.00,1,1,0),
+(6,'12334',NULL,'juan','',174.00,7.000,0,1,NULL,NULL,'2026-04-13 18:22:52',NULL,100.00,1,1,0),
+(7,'000000',NULL,'hola','',1740.00,8.000,0,1,NULL,NULL,'2026-04-15 11:03:12',NULL,1000.00,1,1,0);
 /*!40000 ALTER TABLE `productos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1555,6 +2223,8 @@ CREATE TABLE `usuarios` (
   `password` varchar(255) DEFAULT NULL,
   `rol` enum('admin','jefe','cajero') NOT NULL DEFAULT 'cajero',
   `empresa_id` int(11) NOT NULL,
+  `rol_cajero` tinyint(1) NOT NULL DEFAULT 0,
+  `permiso_presupuestos` text DEFAULT 'ver,crear,editar,eliminar,aprobar,imprimir',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1566,13 +2236,13 @@ CREATE TABLE `usuarios` (
 LOCK TABLES `usuarios` WRITE;
 /*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
 INSERT INTO `usuarios` VALUES
-(1,'ubilla','a6ace2cf5fb423550d66c67b83a0e91af70a522fa58c7ad4dab6b9f94c082656','admin',1),
-(2,'jefe','452b889d10df869834152618463e1c07ce88001a40c9fff5d4fdf300c65684c6','jefe',1),
-(3,'cajero','f976d9b6177d7595d3d45c3c927b0a813c21fac23ed9e5f938813925f6d5eb27','cajero',1),
-(4,'cajero','fea740101dbb727886b6908e7bc196a55054374c6827b41a60081c2525975b4d','cajero',1),
-(5,'prueba','a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3','admin',1),
-(6,'juanmanuel','f809ccfef1ca97649e592dbfcb2a4c7e2b684d3afabae170f9946715a68893f4','admin',1),
-(7,'axel','4183b9f5ed14b64d012ce1e728cfa1e7afc399cb82b6729b222784db6b1a50a7','admin',1);
+(1,'ubilla','a6ace2cf5fb423550d66c67b83a0e91af70a522fa58c7ad4dab6b9f94c082656','admin',1,0,'ver,crear,editar,eliminar,aprobar,imprimir'),
+(2,'jefe','452b889d10df869834152618463e1c07ce88001a40c9fff5d4fdf300c65684c6','jefe',1,0,'ver,crear,editar,eliminar,aprobar,imprimir'),
+(3,'cajero','f976d9b6177d7595d3d45c3c927b0a813c21fac23ed9e5f938813925f6d5eb27','cajero',1,0,'ver,crear,editar,eliminar,aprobar,imprimir'),
+(4,'cajero','fea740101dbb727886b6908e7bc196a55054374c6827b41a60081c2525975b4d','cajero',1,0,'ver,crear,editar,eliminar,aprobar,imprimir'),
+(5,'prueba','a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3','admin',1,0,'ver,crear,editar,eliminar,aprobar,imprimir'),
+(6,'juanmanuel','f809ccfef1ca97649e592dbfcb2a4c7e2b684d3afabae170f9946715a68893f4','admin',1,0,'ver,crear,editar,eliminar,aprobar,imprimir'),
+(7,'axel','4183b9f5ed14b64d012ce1e728cfa1e7afc399cb82b6729b222784db6b1a50a7','admin',1,0,'ver,crear,editar,eliminar,aprobar,imprimir');
 /*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1596,7 +2266,7 @@ CREATE TABLE `venta_items` (
   KEY `producto_id` (`producto_id`),
   CONSTRAINT `venta_items_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   CONSTRAINT `venta_items_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=155 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=180 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1718,7 +2388,26 @@ INSERT INTO `venta_items` VALUES
 (110,208,2,1.000,1860.00,1860.00,1000.00),
 (111,209,2,1.000,1860.00,1860.00,1000.00),
 (112,210,3,1.000,372.00,372.00,200.00),
-(113,211,3,1.000,2000.00,2000.00,1200.00);
+(113,211,3,1.000,2000.00,2000.00,1200.00),
+(159,240,3,4.000,2000.00,8000.00,1200.00),
+(161,242,3,1.000,2000.00,2000.00,1200.00),
+(162,242,7,1.000,1740.00,1740.00,1000.00),
+(163,242,2,1.000,1860.00,1860.00,1000.00),
+(164,242,6,1.000,174.00,174.00,100.00),
+(166,244,3,13.000,2000.00,26000.00,1200.00),
+(167,245,4,4.000,174.00,696.00,100.00),
+(168,245,2,1.000,1860.00,1860.00,1000.00),
+(169,245,3,2.000,2000.00,4000.00,1200.00),
+(170,246,4,1.000,174.00,174.00,100.00),
+(171,246,3,1.000,2000.00,2000.00,1200.00),
+(172,247,4,2.000,174.00,348.00,100.00),
+(173,247,3,2.000,2000.00,4000.00,1200.00),
+(174,248,4,2.000,174.00,348.00,100.00),
+(175,248,3,1.000,2000.00,2000.00,1200.00),
+(176,249,4,3.000,174.00,522.00,100.00),
+(177,249,3,2.000,2000.00,4000.00,1200.00),
+(178,250,4,2.000,174.00,348.00,100.00),
+(179,250,3,2.000,2000.00,4000.00,1200.00);
 /*!40000 ALTER TABLE `venta_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1742,7 +2431,7 @@ CREATE TABLE `ventas` (
   PRIMARY KEY (`id`),
   KEY `cliente_id` (`cliente_id`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=236 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=251 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1962,7 +2651,16 @@ INSERT INTO `ventas` VALUES
 (208,'2026-04-16 18:07:36',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
 (209,'2026-04-17 10:52:54',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
 (210,'2026-04-24 16:27:27',NULL,372.00,NULL,'COMPLETADA',172.00,1,1),
-(211,'2026-04-27 09:28:13',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1);
+(211,'2026-04-27 09:28:13',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
+(240,'2026-04-27 21:10:25',NULL,8000.00,NULL,'COMPLETADA',3200.00,1,1),
+(242,'2026-04-27 21:13:39',NULL,5774.00,NULL,'COMPLETADA',2474.00,1,1),
+(244,'2026-04-27 21:16:17',NULL,26000.00,NULL,'COMPLETADA',10400.00,1,1),
+(245,'2026-04-27 22:02:13',NULL,6556.00,NULL,'COMPLETADA',2756.00,1,1),
+(246,'2026-04-27 22:09:00',NULL,2174.00,NULL,'COMPLETADA',874.00,1,1),
+(247,'2026-04-27 22:22:08',NULL,4348.00,NULL,'COMPLETADA',1748.00,1,1),
+(248,'2026-04-27 22:28:00',NULL,2348.00,NULL,'COMPLETADA',948.00,1,1),
+(249,'2026-04-27 22:28:23',NULL,4522.00,NULL,'COMPLETADA',1822.00,1,1),
+(250,'2026-04-27 22:33:34',NULL,4348.00,NULL,'COMPLETADA',1748.00,1,1);
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2118,4 +2816,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-27 21:03:26
+-- Dump completed on 2026-04-28 11:25:16
