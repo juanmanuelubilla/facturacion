@@ -1,0 +1,493 @@
+<!-- Popup de Cliente Reconocido -->
+<div id="popupClienteReconocido" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden border border-gray-700">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-white bg-opacity-20 rounded-full p-3">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold">Cliente Reconocido</h2>
+                        <p class="text-blue-100 text-sm">Sistema de Reconocimiento Facial</p>
+                    </div>
+                </div>
+                <button onclick="cerrarPopupCliente()" class="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-colors">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+            <div id="popupContent">
+                <!-- Loading -->
+                <div class="flex items-center justify-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    <span class="ml-4 text-gray-400">Cargando información del cliente...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-800 px-6 py-4 border-t border-gray-700">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-400">
+                    <span id="detectionTime">Detectado: </span>
+                </div>
+                <div class="space-x-3">
+                    <button onclick="cerrarPopupCliente()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors">
+                        Cerrar
+                    </button>
+                    <button onclick="iniciarVentaCliente()" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-colors">
+                        <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z"/>
+                        </svg>
+                        Iniciar Venta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let clienteActual = null;
+
+function mostrarPopupCliente(cliente_id) {
+    clienteActual = cliente_id;
+    const popup = document.getElementById('popupClienteReconocido');
+    const content = document.getElementById('popupContent');
+    
+    // Mostrar popup con loading
+    popup.classList.remove('hidden');
+    popup.classList.add('flex');
+    
+    // Actualizar tiempo de detección
+    document.getElementById('detectionTime').textContent = 'Detectado: ' + new Date().toLocaleTimeString();
+    
+    // Cargar datos del cliente
+    fetch(`popup_cliente_reconocido.php?cliente_id=${cliente_id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderClienteData(data);
+            } else {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="bg-red-500 bg-opacity-20 rounded-full p-4 w-20 h-20 mx-auto mb-4">
+                            <svg class="w-12 h-12 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-red-400 mb-2">Error al cargar cliente</h3>
+                        <p class="text-gray-400">${data.error}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="bg-red-500 bg-opacity-20 rounded-full p-4 w-20 h-20 mx-auto mb-4">
+                        <svg class="w-12 h-12 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-red-400 mb-2">Error de conexión</h3>
+                    <p class="text-gray-400">No se pudo conectar con el servidor</p>
+                </div>
+            `;
+        });
+}
+
+function renderClienteData(data) {
+    const content = document.getElementById('popupContent');
+    const cliente = data.cliente;
+    const compras = data.ultimas_compras;
+    const stats = data.estadisticas;
+    
+    content.innerHTML = `
+        <!-- Info Principal del Cliente -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Foto y Nombre -->
+            <div class="md:col-span-1">
+                <div class="text-center">
+                    ${cliente.foto_principal ? 
+                        `<img src="${cliente.foto_principal}" alt="${cliente.nombre_completo}" class="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-blue-500 shadow-lg">` :
+                        `<div class="w-32 h-32 rounded-full mx-auto mb-4 bg-gray-700 flex items-center justify-center border-4 border-blue-500 shadow-lg">
+                            <svg class="w-16 h-16 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                            </svg>
+                        </div>`
+                    }
+                    <h3 class="text-2xl font-bold text-white mb-2">${cliente.nombre_completo}</h3>
+                    <div class="space-y-2 text-sm">
+                        ${cliente.documento ? `<p class="text-gray-400"><span class="text-gray-500">DNI:</span> ${cliente.documento}</p>` : ''}
+                        ${cliente.telefono ? `<p class="text-gray-400"><span class="text-gray-500">Tel:</span> ${cliente.telefono}</p>` : ''}
+                        ${cliente.email ? `<p class="text-gray-400"><span class="text-gray-500">Email:</span> ${cliente.email}</p>` : ''}
+                        ${cliente.condicion_iva ? `<p class="text-gray-400"><span class="text-gray-500">IVA:</span> ${cliente.condicion_iva}</p>` : ''}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Estadísticas -->
+            <div class="md:col-span-2">
+                <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                    </svg>
+                    Estadísticas del Cliente
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="text-2xl font-bold text-blue-400">${stats.total_compras}</div>
+                        <div class="text-sm text-gray-400">Compras</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="text-2xl font-bold text-green-400">${stats.total_gastado}</div>
+                        <div class="text-sm text-gray-400">Total Gastado</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="text-2xl font-bold text-yellow-400">${stats.ticket_promedio}</div>
+                        <div class="text-sm text-gray-400">Ticket Promedio</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div class="text-lg font-bold text-purple-400">${stats.ultima_compra}</div>
+                        <div class="text-sm text-gray-400">Última Compra</div>
+                    </div>
+                </div>
+                
+                ${cliente.comentarios ? `
+                    <div class="mt-4 bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <h5 class="text-sm font-semibold text-gray-400 mb-2">Comentarios</h5>
+                        <p class="text-gray-300">${cliente.comentarios}</p>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+        
+        <!-- Últimas Compras -->
+        <div>
+            <h4 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z"/>
+                </svg>
+                Últimas Compras
+            </h4>
+            ${compras.length > 0 ? `
+                <div class="space-y-3">
+                    ${compras.map(compra => `
+                        <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-blue-500 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm text-gray-400">Venta #${compra.id}</span>
+                                        <span class="text-sm text-gray-400">${compra.fecha_formateada}</span>
+                                    </div>
+                                    <div class="text-white font-medium mb-2">${compra.productos || 'Sin productos'}</div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-lg font-bold text-green-400">${compra.total_formateado}</span>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-xs px-2 py-1 bg-gray-700 rounded text-gray-300">${compra.metodo_pago || 'Efectivo'}</span>
+                                            <span class="text-xs px-2 py-1 ${compra.estado === 'COMPLETADA' ? 'bg-green-600' : 'bg-yellow-600'} rounded text-white">${compra.estado}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <div class="text-center py-8 bg-gray-800 rounded-lg border border-gray-700">
+                    <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z"/>
+                    </svg>
+                    <p class="text-gray-400">Este cliente aún no ha realizado compras</p>
+                </div>
+            `}
+        </div>
+    `;
+}
+
+function cerrarPopupCliente() {
+    const popup = document.getElementById('popupClienteReconocido');
+    popup.classList.add('hidden');
+    popup.classList.remove('flex');
+    clienteActual = null;
+}
+
+function iniciarVentaCliente() {
+    if (clienteActual) {
+        // Verificar en qué página estamos
+        if (window.location.pathname.includes('ventas.php') || window.location.pathname.includes('venta.php')) {
+            // Si estamos en ventas, seleccionar el cliente automáticamente
+            seleccionarClienteEnVentas(clienteActual);
+            cerrarPopupCliente();
+        } else if (window.location.pathname.includes('clientes.php')) {
+            // Si estamos en clientes, seleccionar el cliente automáticamente
+            seleccionarClienteEnClientes(clienteActual);
+            cerrarPopupCliente();
+        } else {
+            // Si no, redirigir a la pantalla de venta con el cliente preseleccionado
+            window.location.href = `venta.php?cliente_id=${clienteActual}`;
+        }
+    }
+}
+
+function seleccionarClienteEnVentas(cliente_id) {
+    // Obtener datos del cliente
+    fetch(`popup_cliente_reconocido.php?cliente_id=${cliente_id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const cliente = data.cliente;
+                
+                // Actualizar variable global de cliente en ventas.php
+                if (typeof clienteActual !== 'undefined') {
+                    clienteActual = {
+                        id: cliente.id,
+                        nombre: cliente.nombre_completo,
+                        documento: cliente.documento || '0'
+                    };
+                    
+                    // Actualizar display del cliente
+                    const clienteDisplay = document.getElementById('clienteDisplay');
+                    if (clienteDisplay) {
+                        clienteDisplay.textContent = cliente.nombre_completo;
+                        clienteDisplay.className = 'text-orange-400';
+                    }
+                    
+                    // Actualizar pantalla cliente si existe la función
+                    if (typeof actualizarPantallaCliente === 'function') {
+                        actualizarPantallaCliente();
+                    }
+                    
+                    // Mostrar notificación
+                    mostrarNotificacionClienteSeleccionado(cliente.nombre_completo);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al seleccionar cliente:', error);
+        });
+}
+
+function seleccionarClienteEnClientes(cliente_id) {
+    // Buscar la fila del cliente en la tabla
+    const filasClientes = document.querySelectorAll('.cliente-row');
+    let filaEncontrada = null;
+    
+    filasClientes.forEach(fila => {
+        // Buscar el botón de editar con el ID del cliente
+        const btnEditar = fila.querySelector(`button[onclick*="editarCliente(${cliente_id})"]`);
+        if (btnEditar) {
+            filaEncontrada = fila;
+        }
+    });
+    
+    if (filaEncontrada) {
+        // Resaltar la fila encontrada
+        resaltarFilaCliente(filaEncontrada);
+        
+        // Hacer scroll suave a la fila
+        filaEncontrada.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Mostrar notificación
+        mostrarNotificacionClienteEncontrado(filaEncontrada.dataset.nombre);
+        
+        // Abrir modal de edición después de un breve delay
+        setTimeout(() => {
+            const btnEditar = filaEncontrada.querySelector(`button[onclick*="editarCliente(${cliente_id})"]`);
+            if (btnEditar) {
+                btnEditar.click();
+            }
+        }, 1000);
+    } else {
+        // Si no se encuentra la fila, mostrar notificación y recargar
+        mostrarNotificacionClienteNoEncontrado();
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
+
+function resaltarFilaCliente(fila) {
+    // Remover resaltados anteriores
+    document.querySelectorAll('.cliente-row').forEach(f => {
+        f.classList.remove('bg-yellow-600', 'border-yellow-400');
+        f.classList.add('bg-gray-800', 'border-gray-700');
+    });
+    
+    // Resaltar la fila encontrada
+    fila.classList.remove('bg-gray-800', 'border-gray-700');
+    fila.classList.add('bg-yellow-600', 'border-yellow-400');
+    
+    // Efecto de parpadeo
+    let parpadeos = 0;
+    const intervalo = setInterval(() => {
+        if (parpadeos >= 6) {
+            clearInterval(intervalo);
+            fila.classList.add('bg-yellow-600', 'border-yellow-400');
+            return;
+        }
+        
+        if (parpadeos % 2 === 0) {
+            fila.classList.remove('bg-yellow-600', 'border-yellow-400');
+            fila.classList.add('bg-gray-800', 'border-gray-700');
+        } else {
+            fila.classList.remove('bg-gray-800', 'border-gray-700');
+            fila.classList.add('bg-yellow-600', 'border-yellow-400');
+        }
+        parpadeos++;
+    }, 200);
+}
+
+function mostrarNotificacionClienteEncontrado(nombreCliente) {
+    const notificacion = document.createElement('div');
+    notificacion.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+    notificacion.innerHTML = `
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/>
+        </svg>
+        <span>Cliente encontrado: ${nombreCliente}</span>
+    `;
+    
+    document.body.appendChild(notificacion);
+    
+    // Animación de entrada
+    notificacion.style.transform = 'translateX(100%)';
+    notificacion.style.transition = 'transform 0.3s ease-out';
+    
+    setTimeout(() => {
+        notificacion.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Eliminar después de 4 segundos
+    setTimeout(() => {
+        notificacion.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(notificacion)) {
+                document.body.removeChild(notificacion);
+            }
+        }, 300);
+    }, 4000);
+}
+
+function mostrarNotificacionClienteNoEncontrado() {
+    const notificacion = document.createElement('div');
+    notificacion.className = 'fixed top-4 right-4 bg-orange-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+    notificacion.innerHTML = `
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+        </svg>
+        <span>Cliente no visible en lista actual. Recargando...</span>
+    `;
+    
+    document.body.appendChild(notificacion);
+    
+    setTimeout(() => {
+        if (document.body.contains(notificacion)) {
+            document.body.removeChild(notificacion);
+        }
+    }, 3000);
+}
+
+function mostrarNotificacionClienteSeleccionado(nombreCliente) {
+    // Crear notificación temporal
+    const notificacion = document.createElement('div');
+    notificacion.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center space-x-2';
+    notificacion.innerHTML = `
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+        </svg>
+        <span>Cliente seleccionado: ${nombreCliente}</span>
+    `;
+    
+    document.body.appendChild(notificacion);
+    
+    // Animación de entrada
+    notificacion.style.transform = 'translateX(100%)';
+    notificacion.style.transition = 'transform 0.3s ease-out';
+    
+    setTimeout(() => {
+        notificacion.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Eliminar después de 3 segundos
+    setTimeout(() => {
+        notificacion.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(notificacion)) {
+                document.body.removeChild(notificacion);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Auto-cerrar después de 10 segundos
+let autoCloseTimer = null;
+
+function resetAutoClose() {
+    if (autoCloseTimer) {
+        clearTimeout(autoCloseTimer);
+    }
+    autoCloseTimer = setTimeout(() => {
+        cerrarPopupCliente();
+    }, 10000); // 10 segundos
+}
+
+// Escuchar eventos de reconocimiento facial
+document.addEventListener('DOMContentLoaded', function() {
+    // WebSocket o polling para detectar reconocimiento facial
+    // Esto se conectará con el sistema de cámaras
+    if (typeof EventSource !== 'undefined') {
+        const eventSource = new EventSource('api/camera_events.php');
+        
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'face_recognition' && data.cliente_id) {
+                mostrarPopupCliente(data.cliente_id);
+                resetAutoClose();
+            }
+        };
+        
+        eventSource.onerror = function(event) {
+            console.error('Error en WebSocket de cámaras:', event);
+            eventSource.close();
+        };
+    }
+});
+</script>
+
+<style>
+#popupClienteReconocido {
+    backdrop-filter: blur(4px);
+}
+
+#popupClienteReconocido .bg-gradient-to-br {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+#popupClienteReconocido > div {
+    animation: slideIn 0.3s ease-out;
+}
+</style>

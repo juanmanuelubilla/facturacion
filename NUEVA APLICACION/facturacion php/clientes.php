@@ -83,7 +83,7 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clientes - NEXUS POS</title>
+    <title>Clientes - WARP POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100">
@@ -152,17 +152,17 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Email</label>
                             <input type="email" name="email" id="email"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Teléfono</label>
                             <input type="text" name="telefono" id="telefono"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">WhatsApp</label>
                             <input type="text" name="whatsapp" id="whatsapp"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div class="flex items-center gap-2">
                             <input type="checkbox" name="acepta_whatsapp" id="acepta_whatsapp" class="w-4 h-4">
@@ -171,13 +171,13 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Comentarios</label>
                             <textarea name="comentarios" id="comentarios" rows="2"
-                                      class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600"></textarea>
+                                      class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"></textarea>
                         </div>
                         <!-- Foto del Cliente -->
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Foto del Cliente</label>
                             <input type="file" name="foto_cliente_file" id="input_foto_cliente" accept="image/*"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 text-sm"
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600 text-sm"
                                    onchange="previewImagen(this, 'preview_foto_cliente', 'foto_cliente')">
                             <input type="hidden" name="foto_cliente" id="foto_cliente">
                             <div id="preview_foto_cliente" class="mt-2 hidden">
@@ -191,7 +191,7 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Foto Opcional</label>
                             <input type="file" name="foto_opcional_file" id="input_foto_opcional" accept="image/*"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 text-sm"
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600 text-sm"
                                    onchange="previewImagen(this, 'preview_foto_opcional', 'foto_opcional')">
                             <input type="hidden" name="foto_opcional" id="foto_opcional">
                             <div id="preview_foto_opcional" class="mt-2 hidden">
@@ -200,13 +200,13 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
                                         class="text-red-400 text-sm mt-1 hover:text-red-300">🗑️ Eliminar imagen</button>
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded font-bold">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold">
                             💾 GUARDAR CLIENTE
                         </button>
-                        <button type="button" onclick="cargarConsumidorFinal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded">
+                        <button type="button" onclick="cargarConsumidorFinal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded">
                             👤 CONSUMIDOR FINAL
                         </button>
-                        <button type="button" onclick="limpiarFormulario()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded">
+                        <button type="button" onclick="limpiarFormulario()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 rounded">
                             🧹 LIMPIAR
                         </button>
                     </div>
@@ -343,7 +343,7 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
             }
             const whatsappClean = whatsapp.replace(/\D/g, '');
             const nombreCompleto = nombre + ' ' + apellido;
-            const mensaje = `Hola ${nombreCompleto}, muchas gracias por tu compra en NEXUS POS! Esperamos verte pronto.`;
+            const mensaje = `Hola ${nombreCompleto}, muchas gracias por tu compra en WARP POS! Esperamos verte pronto.`;
             const url = `https://wa.me/${whatsappClean}?text=${encodeURIComponent(mensaje)}`;
             window.open(url, '_blank');
         }
@@ -409,5 +409,8 @@ $clientes = fetchAll("SELECT * FROM clientes WHERE empresa_id = ? ORDER BY nombr
             });
         }
     </script>
+    
+    <!-- Popup de Reconocimiento Facial -->
+    <?php include 'components/popup_cliente_reconocido.html'; ?>
 </body>
 </html>

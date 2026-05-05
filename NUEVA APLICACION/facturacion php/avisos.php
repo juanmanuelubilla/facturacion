@@ -42,7 +42,9 @@ foreach ($proveedores_ia as $prov) {
 
 // Procesar formularios
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($accion === 'crear') {
+    $form_accion = $_POST['accion'] ?? 'guardar';
+    
+    if ($accion === 'crear' || $accion === 'editar') {
         $titulo = $_POST['titulo'] ?? '';
         $descripcion = $_POST['descripcion'] ?? '';
         $tipo_aviso = $_POST['tipo_aviso'] ?? 'otro';
@@ -51,66 +53,136 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = $_POST['email'] ?? '';
         $fecha_expiracion = !empty($_POST['fecha_expiracion']) ? $_POST['fecha_expiracion'] : null;
         $prompt_ia = $_POST['prompt_ia'] ?? '';
-        $generador_ia = $_POST['generador_ia'] ?? $config_ia['generador_defecto'] ?? 'dalle';
+        $proveedor_id = $_POST['proveedor_ia'] ?? $proveedor_default_id;
         
-        // Generar imagen con IA si hay prompt
+        // Procesar imagen subida manualmente
         $imagen = '';
-        if (!empty($prompt_ia)) {
+        if (!empty($_FILES['imagen']['tmp_name'])) {
             try {
-                require_once 'lib/ImageProcessor.php';
-                $processor = new ImageProcessor($empresa_id);
+                require_once 'lib/empresa_files.php';
+                $empresa_files = new EmpresaFiles($empresa_id);
                 
-                // Obtener proveedor seleccionado
-                $proveedor_id = $_POST['proveedor_ia'] ?? $proveedor_default_id;
-                $proveedor = null;
-                foreach ($proveedores_ia as $prov) {
-                    if ($prov['id'] == $proveedor_id) {
-                        $proveedor = $prov;
-                        break;
-                    }
+                $upload_dir = $empresa_files->getAvisosPathAbsoluta();
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
                 }
                 
-                if ($proveedor && !empty($proveedor['url_api'])) {
-                    $imagen = $processor->generarImagenAPI($prompt_ia, $proveedor['url_api'], $proveedor['api_key'] ?? '');
+                // Generar nombre único preservando extensión
+                $original_name = $_FILES['imagen']['name'];
+                $extension = pathinfo($original_name, PATHINFO_EXTENSION);
+                $extension = strtolower($extension) ?: 'jpg';
+                $filename = 'aviso_' . date('Y-m-d_H-i-s') . '_' . uniqid() . '.' . $extension;
+                $filepath = $upload_dir . $filename;
+                
+                if (move_uploaded_file($_FILES['imagen']['tmp_name'], $filepath)) {
+                    $imagen = $empresa_files->getAvisosPath() . $filename;
                 }
             } catch (Exception $e) {
-                $error = "Error generando imagen: " . $e->getMessage();
+                $error = "Error subiendo imagen: " . $e->getMessage();
             }
         }
         
         // Guardar aviso
-        $proveedor_id = $_POST['proveedor_ia'] ?? $proveedor_default_id;
-        $sql = "INSERT INTO avisos (empresa_id, cliente_id, titulo, descripcion, tipo_aviso, imagen, prompt_ia, generador_ia, telefono_contacto, email_contacto, fecha_expiracion) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        query($sql, [$empresa_id, $cliente_id, $titulo, $descripcion, $tipo_aviso, $imagen, $prompt_ia, $proveedor_id, $telefono, $email, $fecha_expiracion]);
-        
-        header('Location: avisos.php');
-        exit;
-    }
-    
-    if ($accion === 'enviar_banner' && $aviso_id) {
-        $aviso = fetch("SELECT * FROM avisos WHERE id = ? AND empresa_id = ?", [$aviso_id, $empresa_id]);
-        
-        if ($aviso && !empty($aviso['imagen'])) {
-            // Redirigir a banners.php con los datos del aviso (misma lógica que imagenes.php)
-            $params = new URLSearchParams([
-                'from' => 'avisos',
-                'aviso_id' => $aviso_id,
-                'aviso_titulo' => $aviso['titulo'],
-                'aviso_descripcion' => $aviso['descripcion'],
-                'aviso_tipo' => $aviso['tipo_aviso'],
-                'imagen' => $aviso['imagen']
-            ]);
-            
-            header('Location: banners.php?' . $params->toString());
-            exit;
+        if ($accion === 'crear') {
+            $sql = "INSERT INTO avisos (empresa_id, cliente_id, titulo, descripcion, tipo_aviso, imagen, prompt_ia, generador_ia, telefono_contacto, email_contacto, fecha_expiracion) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            query($sql, [$empresa_id, $cliente_id, $titulo, $descripcion, $tipo_aviso, $imagen, $prompt_ia, $proveedor_id, $telefono, $email, $fecha_expiracion]);
+            $db = getDB();
+            $aviso_id = $db->lastInsertId();
+        } else {
+            $aviso_id = $_GET['id'] ?? null;
+            // Si hay nueva imagen, actualizarla, sino mantener la actual
+            if ($imagen) {
+                $sql = "UPDATE avisos SET titulo=?, descripcion=?, tipo_aviso=?, cliente_id=?, imagen=?, prompt_ia=?, generador_ia=?, telefono_contacto=?, email_contacto=?, fecha_expiracion=? 
+                        WHERE id=? AND empresa_id=?";
+                query($sql, [$titulo, $descripcion, $tipo_aviso, $cliente_id, $imagen, $prompt_ia, $proveedor_id, $telefono, $email, $fecha_expiracion, $aviso_id, $empresa_id]);
+            } else {
+                $sql = "UPDATE avisos SET titulo=?, descripcion=?, tipo_aviso=?, cliente_id=?, prompt_ia=?, generador_ia=?, telefono_contacto=?, email_contacto=?, fecha_expiracion=? 
+                        WHERE id=? AND empresa_id=?";
+                query($sql, [$titulo, $descripcion, $tipo_aviso, $cliente_id, $prompt_ia, $proveedor_id, $telefono, $email, $fecha_expiracion, $aviso_id, $empresa_id]);
+            }
         }
-    }
-    
-    if ($accion === 'eliminar' && $aviso_id) {
-        query("DELETE FROM avisos WHERE id = ? AND empresa_id = ?", [$aviso_id, $empresa_id]);
+        
+        // Si se presionó "GUARDAR Y ENVIAR A BANNERS", redirigir a banners.php
+        if ($form_accion === 'guardar_enviar_banner') {
+            // Obtener el aviso recién creado/actualizado
+            $aviso = fetch("SELECT * FROM avisos WHERE id = ? AND empresa_id = ?", [$aviso_id, $empresa_id]);
+            
+            if ($aviso && !empty($aviso['imagen'])) {
+                $params = http_build_query([
+                    'from' => 'avisos',
+                    'aviso_id' => $aviso_id,
+                    'aviso_titulo' => $aviso['titulo'],
+                    'aviso_descripcion' => $aviso['descripcion'],
+                    'aviso_tipo' => $aviso['tipo_aviso'],
+                    'imagen' => $aviso['imagen']
+                ]);
+                
+                header('Location: banners.php?' . $params);
+                exit;
+            } else {
+                // Si no hay imagen, mostrar error
+                $error = "No se puede enviar a banners sin una imagen. Sube una imagen primero.";
+                header('Location: avisos.php?accion=editar&id=' . $aviso_id . '&error=' . urlencode($error));
+                exit;
+            }
+        }
+        
         header('Location: avisos.php');
         exit;
+    }
+    
+}
+
+// Procesar acciones GET (eliminar, enviar a banners)
+if ($accion === 'eliminar' && $aviso_id) {
+    // Primero obtener el aviso para saber qué imagen eliminar
+    $aviso = fetch("SELECT * FROM avisos WHERE id = ? AND empresa_id = ?", [$aviso_id, $empresa_id]);
+    
+    if ($aviso) {
+        // Eliminar imagen física si existe
+        if (!empty($aviso['imagen'])) {
+            $ruta_imagen = $aviso['imagen'];
+            // Convertir ruta relativa a absoluta
+            if (strpos($ruta_imagen, '/') === 0) {
+                $ruta_absoluta = $_SERVER['DOCUMENT_ROOT'] . $ruta_imagen;
+            } else {
+                $ruta_absoluta = dirname(__DIR__) . '/' . $ruta_imagen;
+            }
+            
+            if (file_exists($ruta_absoluta)) {
+                unlink($ruta_absoluta);
+                error_log("Imagen de aviso eliminada: $ruta_absoluta");
+            }
+        }
+        
+        // Eliminar registro de la base de datos
+        query("DELETE FROM avisos WHERE id = ? AND empresa_id = ?", [$aviso_id, $empresa_id]);
+    }
+    
+    header('Location: avisos.php');
+    exit;
+}
+
+if ($accion === 'enviar_banner' && $aviso_id) {
+    $aviso = fetch("SELECT * FROM avisos WHERE id = ? AND empresa_id = ?", [$aviso_id, $empresa_id]);
+    
+    if ($aviso && !empty($aviso['imagen'])) {
+        // Redirigir a banners.php con los datos del aviso
+        $params = http_build_query([
+            'from' => 'avisos',
+            'aviso_id' => $aviso_id,
+            'aviso_titulo' => $aviso['titulo'],
+            'aviso_descripcion' => $aviso['descripcion'],
+            'aviso_tipo' => $aviso['tipo_aviso'],
+            'imagen' => $aviso['imagen']
+        ]);
+        
+        header('Location: banners.php?' . $params);
+        exit;
+    } else {
+        // Si no hay imagen, mostrar error
+        $error = "No se puede enviar a banners sin una imagen.";
     }
 }
 
@@ -170,7 +242,7 @@ $clientes = fetchAll("SELECT id, nombre, apellido FROM clientes WHERE empresa_id
                 <h2 class="text-xl font-bold mb-4">
                     <?= $accion === 'crear' ? 'Crear Nuevo Aviso' : 'Editar Aviso' ?>
                 </h2>
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-gray-400 text-sm mb-2">Título *</label>
@@ -203,17 +275,12 @@ $clientes = fetchAll("SELECT id, nombre, apellido FROM clientes WHERE empresa_id
                             </select>
                         </div>
                         <div>
-                            <label class="block text-gray-400 text-sm mb-2">Fecha Expiración (opcional)</label>
-                            <input type="datetime-local" name="fecha_expiracion" value="<?= $aviso['fecha_expiracion'] ?? '' ?>"
-                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
-                        </div>
-                        <div>
-                            <label class="block text-gray-400 text-sm mb-2">Teléfono Contacto</label>
+                            <label class="block text-gray-400 text-sm mb-2">Teléfono Contacto (opcional)</label>
                             <input type="text" name="telefono" value="<?= htmlspecialchars($aviso['telefono_contacto'] ?? '') ?>"
                                    class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
-                            <label class="block text-gray-400 text-sm mb-2">Email Contacto</label>
+                            <label class="block text-gray-400 text-sm mb-2">Email Contacto (opcional)</label>
                             <input type="email" name="email" value="<?= htmlspecialchars($aviso['email_contacto'] ?? '') ?>"
                                    class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
@@ -223,23 +290,52 @@ $clientes = fetchAll("SELECT id, nombre, apellido FROM clientes WHERE empresa_id
                         <h3 class="text-lg font-bold mb-4">🎨 Generar Imagen con IA</h3>
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-gray-400 text-sm mb-2">Prompt para IA</label>
-                                <textarea name="prompt_ia" rows="2" placeholder="Describe la imagen que quieres generar..."
-                                           class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"><?= htmlspecialchars($aviso['prompt_ia'] ?? '') ?></textarea>
+                                <label class="block text-gray-400 text-sm mb-2">Prompt Personalizado (opcional)</label>
+                                <textarea id="prompt_ia" name="prompt_ia" rows="3"
+                                          class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"
+                                          placeholder="Describe la imagen que quieres generar..."><?= htmlspecialchars($aviso['prompt_ia'] ?? '') ?></textarea>
                             </div>
                             <div>
                                 <label class="block text-gray-400 text-sm mb-2">Proveedor IA</label>
-                                <select name="proveedor_ia" class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
+                                <select id="proveedor_ia" name="proveedor_ia" class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                                     <?php if (empty($proveedores_ia)): ?>
                                     <option value="">No hay proveedores configurados</option>
                                     <?php else: ?>
                                     <?php foreach ($proveedores_ia as $prov): ?>
-                                    <option value="<?= $prov['id'] ?>" <?= ($aviso['generador_ia'] ?? $proveedor_default_id) == $prov['id'] ? 'selected' : '' ?>>
+                                    <option value="<?= $prov['id'] ?>" data-url_web="<?= htmlspecialchars($prov['url_web'] ?? '') ?>" <?= ($aviso['generador_ia'] ?? $proveedor_default_id) == $prov['id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($prov['nombre']) ?>
                                     </option>
                                     <?php endforeach; ?>
                                     <?php endif; ?>
                                 </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <button type="button" onclick="generarPromptAviso()" class="bg-purple-600 hover:bg-purple-700 text-white py-3 rounded font-bold">
+                                    🎨 GENERAR PROMPT
+                                </button>
+                                <button type="button" onclick="copiarPromptAviso()" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold">
+                                    📋 COPIAR PROMPT
+                                </button>
+                                <button type="button" onclick="abrirIAExternaAviso()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded font-bold">
+                                    🌐 ABRIR IA EXTERNA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 border-t border-gray-700 pt-6">
+                        <h3 class="text-lg font-bold mb-4">📤 Subir Imagen Generada</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-gray-400 text-sm mb-2">Imagen del Aviso</label>
+                                <input type="file" id="imagen_aviso" name="imagen" accept="image/*"
+                                       class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
+                                <p class="text-xs text-gray-500 mt-1">Sube la imagen generada por la IA externa</p>
+                            </div>
+                            <div id="preview_container" class="hidden">
+                                <label class="block text-gray-400 text-sm mb-2">Vista Previa</label>
+                                <img id="preview_imagen" class="max-w-xs rounded border border-gray-600">
                             </div>
                         </div>
                     </div>
@@ -251,12 +347,15 @@ $clientes = fetchAll("SELECT id, nombre, apellido FROM clientes WHERE empresa_id
                         </div>
                     <?php endif; ?>
                     
-                    <div class="mt-6 flex space-x-2">
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded font-bold">
+                    <div class="mt-6 flex flex-wrap gap-2">
+                        <button type="submit" name="accion" value="guardar" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded font-bold">
                             💾 GUARDAR
                         </button>
+                        <button type="submit" name="accion" value="guardar_enviar_banner" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded font-bold">
+                            📤 GUARDAR Y ENVIAR A BANNERS
+                        </button>
                         <a href="avisos.php" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded font-bold">
-                            CANCELAR
+                            ❌ CANCELAR
                         </a>
                     </div>
                 </form>
@@ -318,5 +417,101 @@ $clientes = fetchAll("SELECT id, nombre, apellido FROM clientes WHERE empresa_id
             <?php endif; ?>
         <?php endif; ?>
     </div>
+    
+    <script>
+        // Funciones para el flujo de IA similar a imagenes.php
+        function generarPromptAviso() {
+            const titulo = document.querySelector('input[name="titulo"]').value;
+            const descripcion = document.querySelector('textarea[name="descripcion"]').value;
+            const tipoAviso = document.querySelector('select[name="tipo_aviso"]').value;
+            const telefono = document.querySelector('input[name="telefono"]').value;
+            const email = document.querySelector('input[name="email"]').value;
+            const clienteSelect = document.querySelector('select[name="cliente_id"]');
+            const clienteNombre = clienteSelect.selectedIndex > 0 ? clienteSelect.options[clienteSelect.selectedIndex].text : '';
+            
+            if (!titulo) {
+                alert('Primero ingresa un título para el aviso');
+                return;
+            }
+            
+            let prompt = `Crea una imagen para un aviso de tipo "${tipoAviso}". `;
+            prompt += `Título: "${titulo}". `;
+            
+            if (descripcion) {
+                prompt += `Descripción: ${descripcion}. `;
+            }
+            
+            // Incluir información de contacto si está disponible (opcional)
+            if (clienteNombre) {
+                prompt += `Contacto: ${clienteNombre}. `;
+            }
+            if (telefono) {
+                prompt += `Teléfono: ${telefono}. `;
+            }
+            if (email) {
+                prompt += `Email: ${email}. `;
+            }
+            
+            prompt += `La imagen debe ser atractiva, llamativa y profesional para uso en marketing digital. `;
+            prompt += `Estilo visual: moderno, limpio, con buena iluminación y composición. `;
+            prompt += `Incluye elementos visuales relacionados con el tipo de aviso. `;
+            
+            document.getElementById('prompt_ia').value = prompt;
+        }
+        
+        function copiarPromptAviso() {
+            const promptTextarea = document.getElementById('prompt_ia');
+            if (!promptTextarea.value.trim()) {
+                alert('Primero genera un prompt');
+                return;
+            }
+            
+            promptTextarea.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            
+            alert('✅ Prompt copiado al portapapeles');
+        }
+        
+        function abrirIAExternaAviso() {
+            const proveedorSelect = document.getElementById('proveedor_ia');
+            const selectedOption = proveedorSelect.options[proveedorSelect.selectedIndex];
+            const urlWeb = selectedOption.getAttribute('data-url_web');
+            
+            if (!urlWeb) {
+                alert('El proveedor seleccionado no tiene URL web configurada');
+                return;
+            }
+            
+            // Generar prompt automáticamente si no existe
+            const promptTextarea = document.getElementById('prompt_ia');
+            if (!promptTextarea.value.trim()) {
+                generarPromptAviso();
+            }
+            
+            // Copiar prompt al portapapeles
+            const prompt = promptTextarea.value;
+            navigator.clipboard.writeText(prompt).then(() => {
+                window.open(urlWeb, '_blank');
+                alert('✅ Prompt copiado. Se abrirá el sitio de IA externa en una nueva ventana.');
+            }).catch((err) => {
+                window.open(urlWeb, '_blank');
+                alert('⚠️ No se pudo copiar el prompt, pero se abrirá el sitio de IA externa.');
+            });
+        }
+        
+        // Vista previa de imagen
+        document.getElementById('imagen_aviso').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview_imagen').src = e.target.result;
+                    document.getElementById('preview_container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
 </body>
 </html>

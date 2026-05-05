@@ -1,0 +1,41 @@
+# Core dependencies
+opencv-python==4.8.1.78
+numpy==1.24.3
+Pillow==10.0.0
+
+# Computer Vision & AI
+face-recognition==1.3.0
+mediapipe==0.10.7
+ultralytics==8.0.196
+torch==2.0.1
+torchvision==0.15.2
+
+# Database & Redis
+redis==4.6.0
+pymysql==1.0.3
+SQLAlchemy==2.0.19
+
+# Video processing
+ffmpeg-python==0.2.0
+imageio==2.31.1
+imageio-ffmpeg==0.4.8
+
+# System & Utilities
+psutil==5.9.5
+python-dotenv==1.0.0
+schedule==1.2.0
+watchdog==3.0.0
+
+# Web & API
+flask==2.3.2
+requests==2.31.0
+websocket-client==1.6.1
+
+# Logging & Monitoring
+loguru==0.7.2
+prometheus-client==0.17.1
+
+# Machine Learning
+scikit-learn==1.3.0
+pandas==2.0.3
+matplotlib==3.7.2

@@ -60,6 +60,57 @@ php -S localhost:8000
 
 Abrir en navegador: `http://localhost:8000/login.php`
 
+## 🔄 Flujo de Implementación
+
+### **Paso 1: Configuración Inicial**
+1. Acceder a `/setup.php` para configuración inicial
+2. Crear empresa y administrador principal
+3. Configurar parámetros básicos del sistema
+
+### **Paso 2: Configuración de Productos (OBLIGATORIO)**
+1. Acceder a `/productos.php`
+2. Cargar productos básicos con:
+   - Nombre y descripción
+   - Precio de venta y costo
+   - Stock inicial
+   - Categorías (opcional)
+3. **IMPORTANTE**: Sin productos cargados, el sistema no permitirá ventas
+
+### **Paso 3: Configuración de Clientes**
+1. Acceder a `/clientes.php`
+2. Cargar base de clientes inicial
+3. Configurar datos de contacto
+
+### **Paso 4: Operación de Ventas**
+1. Acceder a `/ventas.php`
+2. Realizar ventas con productos cargados
+3. Verificar stock y facturación
+
+### **Paso 5: Control de Inventario**
+1. Acceder a `/inventario.php`
+2. Monitorear niveles de stock
+3. Configurar umbrales de alerta
+
+## ⚠️ Requisitos Mínimos de Operación
+
+Antes de comenzar operaciones, asegúrese de:
+
+- ✅ **Configuración completada** en `/setup.php`
+- ✅ **Mínimo 5 productos** cargados con stock positivo
+- ✅ **Precios definidos** (venta y costo)
+- ✅ **Categorías configuradas** (opcional pero recomendado)
+- ✅ **Clientes básicos** cargados (opcional)
+
+## 🚨 Flujo Lógico del Sistema
+
+```
+INSTALACIÓN → PRODUCTOS → CLIENTES → VENTAS → INVENTARIO
+    ↓           ↓          ↓        ↓         ↓
+setup.php → productos.php → clientes.php → ventas.php → inventario.php
+```
+
+**NOTA**: El sistema sigue una lógica estricta donde no se pueden realizar ventas sin tener productos previamente cargados en el sistema.
+
 ## ✨ Características Principales
 
 ### **Multiempresa Completo**

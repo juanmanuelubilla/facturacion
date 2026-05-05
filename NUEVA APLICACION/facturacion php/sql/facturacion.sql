@@ -16,6 +16,42 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `action_detections`
+--
+
+DROP TABLE IF EXISTS `action_detections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `action_detections` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camera_id` int(11) NOT NULL,
+  `action` varchar(50) NOT NULL,
+  `confidence` decimal(5,4) DEFAULT 0.0000,
+  `person_id` varchar(50) DEFAULT NULL,
+  `bbox_x` int(11) DEFAULT 0,
+  `bbox_y` int(11) DEFAULT 0,
+  `bbox_width` int(11) DEFAULT 0,
+  `bbox_height` int(11) DEFAULT 0,
+  `timestamp` datetime NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`timestamp`),
+  KEY `idx_action` (`action`),
+  KEY `idx_person_id` (`person_id`),
+  KEY `idx_action_detections_camera_time` (`camera_id`,`timestamp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `action_detections`
+--
+
+LOCK TABLES `action_detections` WRITE;
+/*!40000 ALTER TABLE `action_detections` DISABLE KEYS */;
+/*!40000 ALTER TABLE `action_detections` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `alertas_comportamiento`
 --
 
@@ -80,6 +116,38 @@ LOCK TABLES `alertas_seguridad` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `alertas_stock`
+--
+
+DROP TABLE IF EXISTS `alertas_stock`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `alertas_stock` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `producto_id` int(11) NOT NULL,
+  `tipo_alerta` enum('bajo','critico','sobre') NOT NULL,
+  `mensaje` text DEFAULT NULL,
+  `leida` tinyint(1) DEFAULT 0,
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `empresa_id` (`empresa_id`),
+  KEY `producto_id` (`producto_id`),
+  CONSTRAINT `alertas_stock_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
+  CONSTRAINT `alertas_stock_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `alertas_stock`
+--
+
+LOCK TABLES `alertas_stock` WRITE;
+/*!40000 ALTER TABLE `alertas_stock` DISABLE KEYS */;
+/*!40000 ALTER TABLE `alertas_stock` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `asiento_detalles`
 --
 
@@ -98,7 +166,7 @@ CREATE TABLE `asiento_detalles` (
   KEY `idx_asiento_detalles_cuenta` (`cuenta_id`),
   CONSTRAINT `asiento_detalles_ibfk_1` FOREIGN KEY (`asiento_id`) REFERENCES `asientos_contables` (`id`) ON DELETE CASCADE,
   CONSTRAINT `asiento_detalles_ibfk_2` FOREIGN KEY (`cuenta_id`) REFERENCES `plan_cuentas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=689 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=693 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -447,7 +515,11 @@ INSERT INTO `asiento_detalles` VALUES
 (685,181,1,4348.00,0.00,'Venta de contado'),
 (686,181,25,0.00,3593.39,'Ventas del período'),
 (687,181,29,2600.00,0.00,'Costo de mercaderías vendidas'),
-(688,181,18,0.00,754.61,'IVA 21% ventas');
+(688,181,18,0.00,754.61,'IVA 21% ventas'),
+(689,182,1,4348.00,0.00,'Venta de contado'),
+(690,182,25,0.00,3593.39,'Ventas del período'),
+(691,182,29,2600.00,0.00,'Costo de mercaderías vendidas'),
+(692,182,18,0.00,754.61,'IVA 21% ventas');
 /*!40000 ALTER TABLE `asiento_detalles` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -475,7 +547,7 @@ CREATE TABLE `asientos_contables` (
   KEY `idx_asientos_fecha` (`empresa_id`,`fecha`),
   CONSTRAINT `asientos_contables_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
   CONSTRAINT `asientos_contables_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=182 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=184 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -577,7 +649,9 @@ INSERT INTO `asientos_contables` VALUES
 (178,1,90,'2026-04-27','Venta #248 - ','FACTURA','248',4241.08,3748.00,1,'2026-04-28 01:28:00'),
 (179,1,91,'2026-04-27','Venta #249 - ','FACTURA','249',8171.62,7222.00,1,'2026-04-28 01:28:23'),
 (180,1,92,'2026-04-27','Venta #250 - ','FACTURA','250',7861.08,6948.00,1,'2026-04-28 01:33:35'),
-(181,1,93,'2026-04-27','Venta #250 - ','Factura','250',4348.00,4348.00,1,'2026-04-28 02:55:51');
+(181,1,93,'2026-04-27','Venta #250 - ','Factura','250',4348.00,4348.00,1,'2026-04-28 02:55:51'),
+(182,1,94,'2026-04-27','Venta #250 - ','Factura','250',4348.00,4348.00,1,'2026-04-28 19:19:50'),
+(183,1,95,'2026-04-28','Venta #251 - ','FACTURA','251',3930.54,3474.00,1,'2026-04-28 22:41:31');
 /*!40000 ALTER TABLE `asientos_contables` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -600,7 +674,7 @@ CREATE TABLE `asientos_movimientos` (
   KEY `idx_asiento_id` (`asiento_id`),
   KEY `idx_cuenta_id` (`cuenta_id`),
   CONSTRAINT `asientos_movimientos_ibfk_1` FOREIGN KEY (`asiento_id`) REFERENCES `asientos_contables` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -644,7 +718,12 @@ INSERT INTO `asientos_movimientos` VALUES
 (32,180,5,913.08,0.00,'IVA Débito Fiscal #250','2026-04-28 01:33:35'),
 (33,180,4,0.00,4348.00,'Ingreso por Venta #250','2026-04-28 01:33:35'),
 (34,180,6,2600.00,0.00,'Costo Venta #250','2026-04-28 01:33:35'),
-(35,180,3,0.00,2600.00,'Salida Inventario #250','2026-04-28 01:33:35');
+(35,180,3,0.00,2600.00,'Salida Inventario #250','2026-04-28 01:33:35'),
+(36,183,1,2174.00,0.00,'Venta #251','2026-04-28 22:41:31'),
+(37,183,5,456.54,0.00,'IVA Débito Fiscal #251','2026-04-28 22:41:31'),
+(38,183,4,0.00,2174.00,'Ingreso por Venta #251','2026-04-28 22:41:31'),
+(39,183,6,1300.00,0.00,'Costo Venta #251','2026-04-28 22:41:31'),
+(40,183,3,0.00,1300.00,'Salida Inventario #251','2026-04-28 22:41:31');
 /*!40000 ALTER TABLE `asientos_movimientos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -676,7 +755,7 @@ CREATE TABLE `avisos` (
   KEY `idx_cliente` (`cliente_id`),
   KEY `idx_activo` (`activo`),
   KEY `idx_tipo` (`tipo_aviso`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -685,6 +764,8 @@ CREATE TABLE `avisos` (
 
 LOCK TABLES `avisos` WRITE;
 /*!40000 ALTER TABLE `avisos` DISABLE KEYS */;
+INSERT INTO `avisos` VALUES
+(4,1,NULL,'prueba','se perdio mi perro','perdido','/mnt/R2/SD64GB/www/facturacion/html/files/empresa_1/avisos/aviso_2026-04-29_22-05-10_69f2aac650bce.jpeg','Crea una imagen para un aviso de tipo \"perdido\". Título: \"prueba\". Descripción: se perdio mi perro. La imagen debe ser atractiva, llamativa y profesional para uso en marketing digital. Estilo visual: moderno, limpio, con buena iluminación y composición. Incluye elementos visuales relacionados con el tipo de aviso. ','5',0,'2026-04-29 22:05:10','2026-04-18 22:03:00',1,'','');
 /*!40000 ALTER TABLE `avisos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -706,7 +787,7 @@ CREATE TABLE `banners` (
   `creado_en` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -716,9 +797,60 @@ CREATE TABLE `banners` (
 LOCK TABLES `banners` WRITE;
 /*!40000 ALTER TABLE `banners` DISABLE KEYS */;
 INSERT INTO `banners` VALUES
-(2,1,'Promo: Coca-Cola','files/empresa_1/banners/2026/04/20260427_224448_56dd81a7.jpeg','2026-05-01',30,1,'2026-04-28 01:44:51','2026-04-28 01:44:51');
+(23,1,'TEST','/mnt/R2/SD64GB/www/facturacion/html/files/empresa_1/banners/proyectar/banner_2026-04-29_21-57-52_69f2a9108f53a.jpeg','2026-05-02',10,1,'2026-04-30 00:57:56','2026-04-30 00:57:56'),
+(25,1,'Aviso: prueba','/mnt/R2/SD64GB/www/facturacion/html/files/empresa_1/banners/proyectar/banner_2026-04-29_22-05-38_69f2aae259a51.jpeg','2026-04-30',10,1,'2026-04-30 01:05:39','2026-04-30 01:05:39');
 /*!40000 ALTER TABLE `banners` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `bi_insights`
+--
+
+DROP TABLE IF EXISTS `bi_insights`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bi_insights` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camera_id` int(11) DEFAULT NULL,
+  `insight_type` varchar(50) NOT NULL COMMENT 'customer_flow, dwell_time, engagement, crowd_density, queue_analysis',
+  `value` decimal(10,2) DEFAULT NULL,
+  `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`)),
+  `timestamp` datetime NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`timestamp`),
+  KEY `idx_insight_type` (`insight_type`),
+  KEY `idx_timestamp` (`timestamp`),
+  KEY `idx_bi_insights_camera_time` (`camera_id`,`timestamp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `bi_insights`
+--
+
+LOCK TABLES `bi_insights` WRITE;
+/*!40000 ALTER TABLE `bi_insights` DISABLE KEYS */;
+/*!40000 ALTER TABLE `bi_insights` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`facturacion`@`%`*/ /*!50003 TRIGGER IF NOT EXISTS `bi_insights_before_insert` 
+BEFORE INSERT ON `bi_insights` 
+FOR EACH ROW
+SET NEW.timestamp = IFNULL(NEW.timestamp, NOW()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `caja`
@@ -748,6 +880,43 @@ LOCK TABLES `caja` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `cajas`
+--
+
+DROP TABLE IF EXISTS `cajas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cajas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `usuario_id` int(11) NOT NULL,
+  `numero_caja` int(11) NOT NULL,
+  `fecha_apertura` timestamp NULL DEFAULT current_timestamp(),
+  `fecha_cierre` timestamp NULL DEFAULT NULL,
+  `monto_apertura` decimal(10,2) DEFAULT 0.00,
+  `monto_cierre` decimal(10,2) DEFAULT 0.00,
+  `monto_esperado` decimal(10,2) DEFAULT 0.00,
+  `diferencia` decimal(10,2) DEFAULT 0.00,
+  `estado` enum('abierta','cerrada') DEFAULT 'abierta',
+  `observaciones` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `empresa_id` (`empresa_id`),
+  KEY `usuario_id` (`usuario_id`),
+  CONSTRAINT `cajas_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
+  CONSTRAINT `cajas_ibfk_2` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cajas`
+--
+
+LOCK TABLES `cajas` WRITE;
+/*!40000 ALTER TABLE `cajas` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cajas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `camaras`
 --
 
@@ -770,7 +939,7 @@ CREATE TABLE `camaras` (
   `fecha_creacion` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_empresa` (`empresa_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -779,7 +948,149 @@ CREATE TABLE `camaras` (
 
 LOCK TABLES `camaras` WRITE;
 /*!40000 ALTER TABLE `camaras` DISABLE KEYS */;
+INSERT INTO `camaras` VALUES
+(3,'test','9627b0bf2a7b.entrypoint.cloud.wowza.com',1935,'','','RTSP','','','/app-p5260J38/66abe4b9_stream1',0,1,'2026-05-02 00:09:25'),
+(4,'Cámara 9627b0bf2a7b.entrypoint.cloud.wowza.com:1935','9627b0bf2a7b.entrypoint.cloud.wowza.com',1935,'','','RTSP','','','/app-p5260J38/66abe4b9_stream1',1,1,'2026-05-02 00:42:55'),
+(11,'Cámara','9627b0bf2a7b.entrypoint.cloud.wowza.com',1935,'','','RTSP','','','/app-p5260J38/66abe4b9_stream1',1,1,'2026-05-02 00:53:42');
 /*!40000 ALTER TABLE `camaras` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `camera_faces`
+--
+
+DROP TABLE IF EXISTS `camera_faces`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `camera_faces` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `face_id` varchar(50) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `face_data` longtext NOT NULL COMMENT 'Face encoding or image data',
+  `registered_at` datetime NOT NULL,
+  `empresa_id` int(11) NOT NULL,
+  `active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_face_id_empresa` (`face_id`,`empresa_id`),
+  KEY `idx_name` (`name`),
+  KEY `idx_empresa_id` (`empresa_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `camera_faces`
+--
+
+LOCK TABLES `camera_faces` WRITE;
+/*!40000 ALTER TABLE `camera_faces` DISABLE KEYS */;
+/*!40000 ALTER TABLE `camera_faces` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `camera_recording_events`
+--
+
+DROP TABLE IF EXISTS `camera_recording_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `camera_recording_events` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camera_id` int(11) NOT NULL,
+  `event_type` varchar(50) NOT NULL COMMENT 'sale_recording, manual, motion, schedule',
+  `trigger_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`trigger_data`)),
+  `duration` int(11) DEFAULT 0 COMMENT 'Duration in seconds',
+  `file_path` varchar(255) DEFAULT NULL,
+  `file_size` bigint(20) DEFAULT 0,
+  `timestamp` datetime NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`timestamp`),
+  KEY `idx_event_type` (`event_type`),
+  KEY `idx_timestamp` (`timestamp`),
+  KEY `idx_recording_events_camera_time` (`camera_id`,`timestamp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `camera_recording_events`
+--
+
+LOCK TABLES `camera_recording_events` WRITE;
+/*!40000 ALTER TABLE `camera_recording_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `camera_recording_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `camera_sale_events`
+--
+
+DROP TABLE IF EXISTS `camera_sale_events`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `camera_sale_events` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `sale_id` varchar(50) NOT NULL,
+  `empresa_id` int(11) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL,
+  `customer_info` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`customer_info`)),
+  `timestamp` datetime NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `processed` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_sale_id` (`sale_id`),
+  KEY `idx_empresa_timestamp` (`empresa_id`,`timestamp`),
+  KEY `idx_processed` (`processed`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `camera_sale_events`
+--
+
+LOCK TABLES `camera_sale_events` WRITE;
+/*!40000 ALTER TABLE `camera_sale_events` DISABLE KEYS */;
+/*!40000 ALTER TABLE `camera_sale_events` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `camera_system_config`
+--
+
+DROP TABLE IF EXISTS `camera_system_config`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `camera_system_config` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `daemon_enabled` tinyint(1) DEFAULT 1,
+  `ai_analysis_enabled` tinyint(1) DEFAULT 1,
+  `face_recognition_enabled` tinyint(1) DEFAULT 1,
+  `object_detection_enabled` tinyint(1) DEFAULT 1,
+  `action_detection_enabled` tinyint(1) DEFAULT 1,
+  `bi_analysis_enabled` tinyint(1) DEFAULT 1,
+  `alert_system_enabled` tinyint(1) DEFAULT 1,
+  `notification_channels` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`notification_channels`)),
+  `performance_settings` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`performance_settings`)),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_empresa_id` (`empresa_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `camera_system_config`
+--
+
+LOCK TABLES `camera_system_config` WRITE;
+/*!40000 ALTER TABLE `camera_system_config` DISABLE KEYS */;
+INSERT INTO `camera_system_config` VALUES
+(1,1,1,1,1,1,1,1,1,'{\"email\": false, \"sms\": false, \"webhook\": false, \"redis\": true}','{\"max_workers\": 4, \"batch_size\": 32, \"gpu_acceleration\": false}','2026-05-01 22:15:58','2026-05-02 01:15:58'),
+(2,1,1,1,1,1,1,1,1,'{\"email\": false, \"sms\": false, \"webhook\": false, \"redis\": true}','{\"max_workers\": 4, \"batch_size\": 32, \"gpu_acceleration\": false}','2026-05-01 22:16:26','2026-05-02 01:16:26'),
+(3,1,1,1,1,1,1,1,1,'{\"email\": false, \"sms\": false, \"webhook\": false, \"redis\": true}','{\"max_workers\": 4, \"batch_size\": 32, \"gpu_acceleration\": false}','2026-05-01 22:17:06','2026-05-02 01:17:06');
+/*!40000 ALTER TABLE `camera_system_config` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1221,6 +1532,40 @@ INSERT INTO `cupones` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `customer_journeys`
+--
+
+DROP TABLE IF EXISTS `customer_journeys`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `customer_journeys` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` varchar(50) NOT NULL,
+  `camera_id` int(11) NOT NULL,
+  `entry_time` datetime NOT NULL,
+  `exit_time` datetime DEFAULT NULL,
+  `path_points` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'List of (x,y) coordinates' CHECK (json_valid(`path_points`)),
+  `dwell_time` int(11) DEFAULT 0 COMMENT 'Duration in seconds',
+  `interactions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`interactions`)),
+  `conversion_detected` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_customer_id` (`customer_id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`entry_time`),
+  KEY `idx_entry_time` (`entry_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `customer_journeys`
+--
+
+LOCK TABLES `customer_journeys` WRITE;
+/*!40000 ALTER TABLE `customer_journeys` DISABLE KEYS */;
+/*!40000 ALTER TABLE `customer_journeys` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `detecciones_faciales`
 --
 
@@ -1265,6 +1610,8 @@ CREATE TABLE `empresas` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) NOT NULL,
   `cuit` varchar(20) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `url_personalizada` varchar(50) DEFAULT NULL,
   `activo` tinyint(1) DEFAULT 1,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -1277,8 +1624,8 @@ CREATE TABLE `empresas` (
 LOCK TABLES `empresas` WRITE;
 /*!40000 ALTER TABLE `empresas` DISABLE KEYS */;
 INSERT INTO `empresas` VALUES
-(1,'BOTILLERIA CURICO','20-258472811',1),
-(2,'TEST','3423542456',1);
+(1,'BOTILLERIA CURICO','20-258472811',NULL,NULL,1),
+(2,'TEST','3423542456',NULL,NULL,1);
 /*!40000 ALTER TABLE `empresas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1352,6 +1699,43 @@ LOCK TABLES `eventos_comportamiento` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `face_detections`
+--
+
+DROP TABLE IF EXISTS `face_detections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `face_detections` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camera_id` int(11) NOT NULL,
+  `face_id` varchar(50) DEFAULT NULL,
+  `name` varchar(100) DEFAULT 'Unknown',
+  `confidence` decimal(5,4) DEFAULT 0.0000,
+  `bbox_x` int(11) DEFAULT 0,
+  `bbox_y` int(11) DEFAULT 0,
+  `bbox_width` int(11) DEFAULT 0,
+  `bbox_height` int(11) DEFAULT 0,
+  `timestamp` datetime NOT NULL,
+  `image_path` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`timestamp`),
+  KEY `idx_face_id` (`face_id`),
+  KEY `idx_name` (`name`),
+  KEY `idx_face_detections_camera_time` (`camera_id`,`timestamp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `face_detections`
+--
+
+LOCK TABLES `face_detections` WRITE;
+/*!40000 ALTER TABLE `face_detections` DISABLE KEYS */;
+/*!40000 ALTER TABLE `face_detections` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `finanzas`
 --
 
@@ -1372,7 +1756,7 @@ CREATE TABLE `finanzas` (
   PRIMARY KEY (`id`),
   KEY `empresa_id` (`empresa_id`),
   CONSTRAINT `finanzas_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=82 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=83 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1432,8 +1816,42 @@ INSERT INTO `finanzas` VALUES
 (78,1,'INGRESO','Ventas',4348.00,'Venta #247','TARJETA','2026-04-27','22:22:08',1),
 (79,1,'INGRESO','Ventas',2348.00,'Venta #248','EFECTIVO','2026-04-27','22:28:00',1),
 (80,1,'INGRESO','Ventas',4522.00,'Venta #249','EFECTIVO','2026-04-27','22:28:23',1),
-(81,1,'INGRESO','Ventas',4348.00,'Venta #250','EFECTIVO','2026-04-27','22:33:34',1);
+(81,1,'INGRESO','Ventas',4348.00,'Venta #250','EFECTIVO','2026-04-27','22:33:34',1),
+(82,1,'INGRESO','Ventas',2174.00,'Venta #251','EFECTIVO','2026-04-28','19:41:31',1);
 /*!40000 ALTER TABLE `finanzas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `inventario`
+--
+
+DROP TABLE IF EXISTS `inventario`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `inventario` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `producto_id` int(11) NOT NULL,
+  `stock_actual` int(11) DEFAULT 0,
+  `stock_minimo` int(11) DEFAULT 0,
+  `stock_maximo` int(11) DEFAULT 0,
+  `ubicacion` varchar(100) DEFAULT NULL,
+  `ultima_actualizacion` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `empresa_id` (`empresa_id`,`producto_id`),
+  KEY `producto_id` (`producto_id`),
+  CONSTRAINT `inventario_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
+  CONSTRAINT `inventario_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `inventario`
+--
+
+LOCK TABLES `inventario` WRITE;
+/*!40000 ALTER TABLE `inventario` DISABLE KEYS */;
+/*!40000 ALTER TABLE `inventario` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1468,6 +1886,41 @@ LOCK TABLES `movimientos_caja` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `movimientos_inventario`
+--
+
+DROP TABLE IF EXISTS `movimientos_inventario`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `movimientos_inventario` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `empresa_id` int(11) NOT NULL,
+  `producto_id` int(11) NOT NULL,
+  `tipo` enum('entrada','salida','ajuste','transferencia') NOT NULL,
+  `cantidad` int(11) NOT NULL,
+  `motivo` varchar(255) DEFAULT NULL,
+  `usuario_id` int(11) DEFAULT NULL,
+  `fecha` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `empresa_id` (`empresa_id`),
+  KEY `producto_id` (`producto_id`),
+  KEY `usuario_id` (`usuario_id`),
+  CONSTRAINT `movimientos_inventario_ibfk_1` FOREIGN KEY (`empresa_id`) REFERENCES `empresas` (`id`),
+  CONSTRAINT `movimientos_inventario_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`),
+  CONSTRAINT `movimientos_inventario_ibfk_3` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `movimientos_inventario`
+--
+
+LOCK TABLES `movimientos_inventario` WRITE;
+/*!40000 ALTER TABLE `movimientos_inventario` DISABLE KEYS */;
+/*!40000 ALTER TABLE `movimientos_inventario` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `nombre_negocio`
 --
 
@@ -1476,7 +1929,7 @@ DROP TABLE IF EXISTS `nombre_negocio`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `nombre_negocio` (
   `id` int(11) NOT NULL CHECK (`id` = 1),
-  `nombre_negocio` varchar(100) DEFAULT 'NEXUS POS',
+  `nombre_negocio` varchar(100) DEFAULT 'WARP POS',
   `eslogan` varchar(150) DEFAULT 'POINT OF SALE',
   `moneda` varchar(5) DEFAULT '$',
   `impuesto` decimal(5,2) DEFAULT 0.00,
@@ -1494,6 +1947,8 @@ CREATE TABLE `nombre_negocio` (
   `iibb` float DEFAULT 0,
   `margen_ganancia` float DEFAULT 0,
   `afip_mock` tinyint(4) DEFAULT 0,
+  `stock_bajo_entero` int(11) DEFAULT 5,
+  `stock_bajo_fraccion` decimal(10,3) DEFAULT 1.000,
   `ventas_fraccion` tinyint(4) DEFAULT 0,
   `punto_vta` int(11) DEFAULT 1,
   `afip_cert` text DEFAULT NULL,
@@ -1528,6 +1983,14 @@ CREATE TABLE `nombre_negocio` (
   `afip_punto_venta` int(11) DEFAULT 0,
   `afip_certificado` text DEFAULT NULL,
   `afip_clave` text DEFAULT NULL,
+  `sftp_host` varchar(255) DEFAULT '192.168.31.102',
+  `sftp_port` varchar(10) DEFAULT '22',
+  `sftp_user` varchar(100) DEFAULT 'pi',
+  `sftp_password` varchar(255) DEFAULT 'juanmanuel',
+  `sftp_remote_path` varchar(500) DEFAULT '/mnt/R2/SD64GB/www/facturacion/html/banners/',
+  `sftp_enabled` tinyint(1) DEFAULT 0,
+  `dlna_ssh_user` varchar(100) DEFAULT 'root',
+  `dlna_ssh_password` varchar(255) DEFAULT '',
   PRIMARY KEY (`id`),
   KEY `idx_impresora_auto` (`impresora_auto`),
   KEY `idx_impresora_ticket` (`impresora_ticket`),
@@ -1542,8 +2005,43 @@ CREATE TABLE `nombre_negocio` (
 LOCK TABLES `nombre_negocio` WRITE;
 /*!40000 ALTER TABLE `nombre_negocio` DISABLE KEYS */;
 INSERT INTO `nombre_negocio` VALUES
-(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','files/empresa_1/tickets/',1,1,'files/empresa_1/productos/',0,3,50,1,0,1,'','',0,NULL,0,'Default','Default','Ideogram AI','files/empresa_1/ia/','files/empresa_1/banners/','files/empresa_1/imagenes/','files/empresa_1/videos/',1,1,'remoto','192.168.1.101','8200',NULL,NULL,NULL,NULL,NULL,587,NULL,NULL,'tls',NULL,NULL,'',0,'','');
+(1,'BOTILLERIA CURICO','PUNTO DE VENTA','$',21.00,3.00,50.00,'20-258472811','INDEPENDENCIA 3100','No Inscripto','1160281010','files/empresa_1/tickets/',1,1,'files/empresa_1/productos/',0,3,50,1,5,1.000,0,1,'','',0,NULL,0,'Default','Default','Ideogram AI','files/empresa_1/ia/','files/empresa_1/banners/proyectar/','files/empresa_1/imagenes/','files/empresa_1/videos/',0,0,'local','192.168.1.100','8200',NULL,NULL,NULL,NULL,NULL,587,NULL,NULL,'tls',NULL,NULL,'',0,'','','192.168.31.101','22','pi','juanmanuel','/mnt/R1/HDD1TBLAP/FACTURACION/',1,'root','');
 /*!40000 ALTER TABLE `nombre_negocio` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `object_detections`
+--
+
+DROP TABLE IF EXISTS `object_detections`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `object_detections` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camera_id` int(11) NOT NULL,
+  `class_name` varchar(50) NOT NULL,
+  `confidence` decimal(5,4) DEFAULT 0.0000,
+  `bbox_x` int(11) DEFAULT 0,
+  `bbox_y` int(11) DEFAULT 0,
+  `bbox_width` int(11) DEFAULT 0,
+  `bbox_height` int(11) DEFAULT 0,
+  `timestamp` datetime NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`timestamp`),
+  KEY `idx_class_name` (`class_name`),
+  KEY `idx_timestamp` (`timestamp`),
+  KEY `idx_object_detections_camera_time` (`camera_id`,`timestamp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `object_detections`
+--
+
+LOCK TABLES `object_detections` WRITE;
+/*!40000 ALTER TABLE `object_detections` DISABLE KEYS */;
+/*!40000 ALTER TABLE `object_detections` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1576,7 +2074,7 @@ CREATE TABLE `pagos` (
   KEY `idx_external_reference` (`external_reference`),
   KEY `idx_fecha_validacion` (`fecha_validacion`),
   CONSTRAINT `pagos_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=119 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=120 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1673,7 +2171,8 @@ INSERT INTO `pagos` VALUES
 (115,247,'TARJETA',4348.00,'2026-04-27 22:22:08',0.00,4348.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
 (116,248,'EFECTIVO',2348.00,'2026-04-27 22:28:00',17652.00,20000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
 (117,249,'EFECTIVO',4522.00,'2026-04-27 22:28:23',5478.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
-(118,250,'EFECTIVO',4348.00,'2026-04-27 22:33:34',5652.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL);
+(118,250,'EFECTIVO',4348.00,'2026-04-27 22:33:34',5652.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL),
+(119,251,'EFECTIVO',2174.00,'2026-04-28 19:41:31',7826.00,10000.00,'completado',1,'pendiente',NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `pagos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2045,8 +2544,8 @@ LOCK TABLES `productos` WRITE;
 INSERT INTO `productos` VALUES
 (1,'123','','Coca-Cola','None',2000.00,1000.000,0,0,NULL,'','2026-04-04 11:47:18','files/empresa_1/productos/20260427_220025_2ef2e7ef.jpg',1200.00,1,1,0),
 (2,'22222',NULL,'juan','',1860.00,90.000,0,1,NULL,NULL,'2026-04-06 19:41:44',NULL,1000.00,1,1,0),
-(3,'62345','','Coca-Cola','None',2000.00,71.000,0,1,NULL,'','2026-04-08 12:10:07','files/empresa_1/productos/20260427_220052_e1f258e5.jpg',1200.00,1,1,0),
-(4,'2542312','','axelito','',174.00,86.000,0,1,NULL,'','2026-04-08 21:41:21','files/empresa_1/productos/20260427_220041_dafef302.jpg',100.00,1,1,0),
+(3,'62345','','Coca-Cola','None',2000.00,70.000,0,1,NULL,'','2026-04-08 12:10:07','files/empresa_1/productos/20260427_220052_e1f258e5.jpg',1200.00,1,1,0),
+(4,'2542312','','axelito','',174.00,85.000,0,1,NULL,'','2026-04-08 21:41:21','files/empresa_1/productos/20260427_220041_dafef302.jpg',100.00,1,1,0),
 (6,'12334',NULL,'juan','',174.00,7.000,0,1,NULL,NULL,'2026-04-13 18:22:52',NULL,100.00,1,1,0),
 (7,'000000',NULL,'hola','',1740.00,8.000,0,1,NULL,NULL,'2026-04-15 11:03:12',NULL,1000.00,1,1,0);
 /*!40000 ALTER TABLE `productos` ENABLE KEYS */;
@@ -2211,6 +2710,74 @@ INSERT INTO `proveedores_ia` VALUES
 UNLOCK TABLES;
 
 --
+-- Table structure for table `security_alerts`
+--
+
+DROP TABLE IF EXISTS `security_alerts`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `security_alerts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `camera_id` int(11) NOT NULL,
+  `alert_type` varchar(50) NOT NULL,
+  `description` text NOT NULL,
+  `severity` enum('low','medium','high','critical') DEFAULT 'medium',
+  `details_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details_json`)),
+  `timestamp` datetime NOT NULL,
+  `acknowledged` tinyint(1) DEFAULT 0,
+  `acknowledged_by` varchar(100) DEFAULT NULL,
+  `acknowledged_at` datetime DEFAULT NULL,
+  `resolved` tinyint(1) DEFAULT 0,
+  `resolved_at` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_camera_timestamp` (`camera_id`,`timestamp`),
+  KEY `idx_alert_type` (`alert_type`),
+  KEY `idx_severity` (`severity`),
+  KEY `idx_acknowledged` (`acknowledged`),
+  KEY `idx_security_alerts_camera_time` (`camera_id`,`timestamp` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `security_alerts`
+--
+
+LOCK TABLES `security_alerts` WRITE;
+/*!40000 ALTER TABLE `security_alerts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `security_alerts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `system_metrics`
+--
+
+DROP TABLE IF EXISTS `system_metrics`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `system_metrics` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `metric_type` varchar(50) NOT NULL COMMENT 'cpu, memory, disk, network, cameras_active',
+  `value` decimal(10,2) NOT NULL,
+  `unit` varchar(20) DEFAULT NULL COMMENT '% or GB or MB or ms',
+  `timestamp` datetime NOT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_metric_timestamp` (`metric_type`,`timestamp`),
+  KEY `idx_timestamp` (`timestamp`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `system_metrics`
+--
+
+LOCK TABLES `system_metrics` WRITE;
+/*!40000 ALTER TABLE `system_metrics` DISABLE KEYS */;
+/*!40000 ALTER TABLE `system_metrics` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `usuarios`
 --
 
@@ -2247,6 +2814,42 @@ INSERT INTO `usuarios` VALUES
 UNLOCK TABLES;
 
 --
+-- Temporary table structure for view `v_camera_summary`
+--
+
+DROP TABLE IF EXISTS `v_camera_summary`;
+/*!50001 DROP VIEW IF EXISTS `v_camera_summary`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `v_camera_summary` AS SELECT
+ 1 AS `camera_id`,
+  1 AS `camera_name`,
+  1 AS `camera_ip`,
+  1 AS `active`,
+  1 AS `face_detections_today`,
+  1 AS `object_detections_today`,
+  1 AS `action_detections_today`,
+  1 AS `alerts_today`,
+  1 AS `recordings_today` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `v_recent_activity`
+--
+
+DROP TABLE IF EXISTS `v_recent_activity`;
+/*!50001 DROP VIEW IF EXISTS `v_recent_activity`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `v_recent_activity` AS SELECT
+ 1 AS `activity_type`,
+  1 AS `description`,
+  1 AS `camera_id`,
+  1 AS `timestamp`,
+  1 AS `confidence` */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Table structure for table `venta_items`
 --
 
@@ -2266,7 +2869,7 @@ CREATE TABLE `venta_items` (
   KEY `producto_id` (`producto_id`),
   CONSTRAINT `venta_items_ibfk_1` FOREIGN KEY (`venta_id`) REFERENCES `ventas` (`id`),
   CONSTRAINT `venta_items_ibfk_2` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=180 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=182 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2407,7 +3010,9 @@ INSERT INTO `venta_items` VALUES
 (176,249,4,3.000,174.00,522.00,100.00),
 (177,249,3,2.000,2000.00,4000.00,1200.00),
 (178,250,4,2.000,174.00,348.00,100.00),
-(179,250,3,2.000,2000.00,4000.00,1200.00);
+(179,250,3,2.000,2000.00,4000.00,1200.00),
+(180,251,4,1.000,174.00,174.00,100.00),
+(181,251,3,1.000,2000.00,2000.00,1200.00);
 /*!40000 ALTER TABLE `venta_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2428,10 +3033,11 @@ CREATE TABLE `ventas` (
   `ganancia` decimal(10,2) DEFAULT NULL,
   `usuario_id` int(11) DEFAULT 1,
   `empresa_id` int(11) NOT NULL DEFAULT 1,
+  `metodo_pago` varchar(50) DEFAULT NULL COMMENT 'Método de pago utilizado',
   PRIMARY KEY (`id`),
   KEY `cliente_id` (`cliente_id`),
   CONSTRAINT `ventas_ibfk_1` FOREIGN KEY (`cliente_id`) REFERENCES `clientes` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=251 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=252 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2441,226 +3047,227 @@ CREATE TABLE `ventas` (
 LOCK TABLES `ventas` WRITE;
 /*!40000 ALTER TABLE `ventas` DISABLE KEYS */;
 INSERT INTO `ventas` VALUES
-(1,'2026-04-04 11:47:29',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(2,'2026-04-04 11:52:54',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(3,'2026-04-05 15:05:15',NULL,8000.00,'TICKET','COMPLETADA',NULL,1,1),
-(4,'2026-04-05 15:05:51',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(5,'2026-04-05 15:14:54',NULL,2000.00,'TICKET','COMPLETADA',NULL,1,1),
-(6,'2026-04-05 15:15:11',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(7,'2026-04-05 15:16:09',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(8,'2026-04-05 15:27:28',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(9,'2026-04-05 15:28:44',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(10,'2026-04-05 15:31:16',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(11,'2026-04-05 15:32:28',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(12,'2026-04-05 15:35:09',NULL,0.00,NULL,'PENDIENTE',NULL,1,1),
-(13,'2026-04-05 15:35:43',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(14,'2026-04-05 15:39:53',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(15,'2026-04-05 15:52:08',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(16,'2026-04-05 15:58:59',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(17,'2026-04-05 16:01:21',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1),
-(18,'2026-04-05 16:08:41',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(19,'2026-04-05 16:09:04',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(20,'2026-04-05 16:16:36',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(21,'2026-04-05 16:19:36',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(22,'2026-04-05 16:23:51',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(23,'2026-04-05 16:28:32',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(24,'2026-04-05 16:31:18',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(25,'2026-04-05 16:33:47',NULL,10000.00,NULL,'COMPLETADA',NULL,1,1),
-(26,'2026-04-05 16:34:03',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(27,'2026-04-05 17:18:17',NULL,0.00,NULL,'ABIERTA',NULL,1,1),
-(28,'2026-04-05 17:19:00',NULL,0.00,NULL,'ABIERTA',NULL,1,1),
-(29,'2026-04-05 17:20:22',NULL,0.00,NULL,'ABIERTA',NULL,1,1),
-(30,'2026-04-05 17:27:07',NULL,0.00,NULL,'ABIERTA',NULL,1,1),
-(31,'2026-04-05 17:30:23',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(32,'2026-04-05 17:31:46',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(33,'2026-04-05 17:32:12',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(34,'2026-04-05 17:32:33',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(35,'2026-04-05 17:33:24',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(36,'2026-04-05 17:33:57',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(37,'2026-04-05 17:34:20',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(38,'2026-04-05 17:35:28',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(39,'2026-04-05 17:35:59',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(40,'2026-04-05 17:56:00',NULL,4000.00,NULL,'COMPLETADA',NULL,1,1),
-(41,'2026-04-05 18:00:53',NULL,4000.00,NULL,'COMPLETADA',NULL,1,1),
-(42,'2026-04-05 18:01:02',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(43,'2026-04-05 18:01:41',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(44,'2026-04-05 18:02:19',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(45,'2026-04-05 18:02:36',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(46,'2026-04-05 18:02:38',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(47,'2026-04-05 18:06:05',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(48,'2026-04-05 18:12:55',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(49,'2026-04-05 18:19:40',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(50,'2026-04-05 18:19:49',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(51,'2026-04-05 18:19:58',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(52,'2026-04-05 18:24:02',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(53,'2026-04-05 18:36:22',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(54,'2026-04-05 18:40:21',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(55,'2026-04-05 18:41:50',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(56,'2026-04-05 18:41:59',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(57,'2026-04-05 18:42:11',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(58,'2026-04-05 18:42:24',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(59,'2026-04-05 18:42:27',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(60,'2026-04-05 18:43:29',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(61,'2026-04-05 18:44:02',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(62,'2026-04-05 18:44:12',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(63,'2026-04-06 18:39:45',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(64,'2026-04-06 18:41:43',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(65,'2026-04-06 18:43:45',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(66,'2026-04-06 18:45:43',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(67,'2026-04-06 18:47:40',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(68,'2026-04-06 18:51:00',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(69,'2026-04-06 18:57:23',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(70,'2026-04-06 18:58:40',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(71,'2026-04-06 19:01:04',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(72,'2026-04-06 19:03:43',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(73,'2026-04-06 19:03:53',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(74,'2026-04-06 19:06:33',NULL,4000.00,NULL,'COMPLETADA',NULL,1,1),
-(75,'2026-04-06 19:06:48',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(76,'2026-04-06 19:08:35',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(77,'2026-04-06 19:09:16',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(78,'2026-04-06 19:11:29',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(79,'2026-04-06 19:11:49',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(80,'2026-04-06 19:17:51',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1),
-(81,'2026-04-06 19:18:06',NULL,0.00,NULL,'COMPLETADA',NULL,1,1),
-(82,'2026-04-06 19:30:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(83,'2026-04-06 19:33:19',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(84,'2026-04-06 19:35:13',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1),
-(85,'2026-04-06 19:35:25',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(86,'2026-04-06 19:37:47',NULL,8000.00,NULL,'COMPLETADA',8000.00,1,1),
-(87,'2026-04-06 19:38:01',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(88,'2026-04-06 21:00:13',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(89,'2026-04-06 21:03:38',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(90,'2026-04-06 21:08:41',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(91,'2026-04-06 21:14:07',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1),
-(92,'2026-04-06 21:14:25',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(93,'2026-04-06 21:23:32',NULL,4000.00,NULL,'COMPLETADA',4000.00,1,1),
-(94,'2026-04-06 21:24:20',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(95,'2026-04-06 21:24:49',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(96,'2026-04-06 21:27:02',NULL,4000.00,NULL,'COMPLETADA',4000.00,1,1),
-(97,'2026-04-06 21:27:38',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(98,'2026-04-06 21:29:12',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(99,'2026-04-06 21:36:37',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(100,'2026-04-06 21:54:28',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(101,'2026-04-06 22:07:55',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(102,'2026-04-06 22:10:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(103,'2026-04-06 22:17:12',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(104,'2026-04-06 22:17:14',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(105,'2026-04-06 22:18:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(106,'2026-04-06 22:18:25',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(107,'2026-04-06 22:18:36',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(108,'2026-04-06 22:20:37',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(109,'2026-04-06 22:20:39',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(110,'2026-04-06 22:21:01',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(111,'2026-04-06 22:21:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(112,'2026-04-06 22:23:08',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(113,'2026-04-06 22:26:19',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(114,'2026-04-08 16:30:18',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1),
-(115,'2026-04-08 16:30:20',NULL,6000.00,NULL,'COMPLETADA',6000.00,NULL,1),
-(116,'2026-04-08 16:31:53',NULL,4000.00,NULL,'COMPLETADA',4000.00,NULL,1),
-(117,'2026-04-08 16:33:02',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(118,'2026-04-08 16:33:32',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1),
-(119,'2026-04-08 16:33:39',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(120,'2026-04-08 16:34:27',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1),
-(121,'2026-04-08 16:34:34',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(122,'2026-04-08 16:36:41',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1),
-(123,'2026-04-08 16:36:47',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(124,'2026-04-08 16:49:33',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1),
-(125,'2026-04-08 16:49:40',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(126,'2026-04-08 16:55:21',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(127,'2026-04-08 17:39:11',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(128,'2026-04-08 18:14:35',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(129,'2026-04-08 18:15:41',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1),
-(130,'2026-04-08 20:06:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(131,'2026-04-08 20:11:20',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(132,'2026-04-08 20:16:47',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(133,'2026-04-08 20:21:07',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(134,'2026-04-08 20:53:26',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(135,'2026-04-08 20:53:35',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(136,'2026-04-08 21:02:02',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(137,'2026-04-08 21:37:46',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(138,'2026-04-09 15:58:50',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(139,'2026-04-13 18:10:43',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(140,'2026-04-13 18:10:56',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(141,'2026-04-13 18:15:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(142,'2026-04-13 18:18:26',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(143,'2026-04-13 18:18:53',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(144,'2026-04-13 18:18:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(145,'2026-04-13 18:22:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(146,'2026-04-13 18:22:58',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(147,'2026-04-13 18:29:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(148,'2026-04-13 20:32:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(149,'2026-04-13 20:49:41',NULL,174.00,NULL,'COMPLETADA',74.00,1,1),
-(150,'2026-04-13 20:50:11',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(151,'2026-04-13 20:50:42',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(152,'2026-04-13 20:57:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(153,'2026-04-13 21:05:53',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(154,'2026-04-13 21:09:16',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(155,'2026-04-13 21:10:03',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(156,'2026-04-13 21:33:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(157,'2026-04-13 21:43:51',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(158,'2026-04-13 21:44:12',NULL,8546.00,NULL,'COMPLETADA',3446.00,1,1),
-(159,'2026-04-13 21:44:36',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(160,'2026-04-13 22:02:19',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(161,'2026-04-13 22:05:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(162,'2026-04-14 11:33:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(163,'2026-04-14 11:34:00',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(164,'2026-04-14 11:38:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(165,'2026-04-14 12:18:37',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(166,'2026-04-14 12:24:40',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(167,'2026-04-14 12:32:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(168,'2026-04-14 12:32:32',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(169,'2026-04-14 12:37:48',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1),
-(170,'2026-04-14 12:40:01',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1),
-(171,'2026-04-14 12:40:57',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(172,'2026-04-14 21:01:16',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1),
-(173,'2026-04-14 21:11:48',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(174,'2026-04-14 21:14:16',NULL,0.00,NULL,'COMPLETADA',0.00,1,1),
-(175,'2026-04-14 21:14:29',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(176,'2026-04-14 21:36:19',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(177,'2026-04-14 21:37:05',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(178,'2026-04-14 21:39:12',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(179,'2026-04-14 21:57:39',NULL,4000.00,NULL,'COMPLETADA',1600.00,1,1),
-(180,'2026-04-14 22:51:35',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(181,'2026-04-14 22:52:57',1,6000.00,NULL,'COMPLETADA',2400.00,1,1),
-(182,'2026-04-15 10:33:54',NULL,8000.00,NULL,'COMPLETADA',3200.00,1,1),
-(183,'2026-04-15 11:00:58',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(184,'2026-04-15 11:02:46',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(185,'2026-04-15 11:03:40',NULL,1740.00,NULL,'COMPLETADA',740.00,1,1),
-(186,'2026-04-15 11:03:53',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(187,'2026-04-15 11:19:03',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(188,'2026-04-15 11:24:55',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(189,'2026-04-15 11:26:27',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(190,'2026-04-15 11:29:35',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(191,'2026-04-15 11:30:33',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(192,'2026-04-15 12:04:48',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(193,'2026-04-15 12:16:51',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(194,'2026-04-15 12:17:47',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(195,'2026-04-15 12:18:43',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(196,'2026-04-15 12:28:51',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(197,'2026-04-15 12:35:49',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(198,'2026-04-15 16:03:56',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(199,'2026-04-15 16:06:41',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(200,'2026-04-15 16:07:05',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(201,'2026-04-15 16:09:36',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(202,'2026-04-15 16:23:57',NULL,174.00,NULL,'COMPLETADA',74.00,1,1),
-(203,'2026-04-15 16:25:03',NULL,696.00,NULL,'COMPLETADA',296.00,1,1),
-(204,'2026-04-15 17:43:45',NULL,5580.00,NULL,'COMPLETADA',2580.00,1,1),
-(205,'2026-04-15 17:44:17',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
-(206,'2026-04-15 17:48:04',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
-(207,'2026-04-16 18:02:53',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
-(208,'2026-04-16 18:07:36',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
-(209,'2026-04-17 10:52:54',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1),
-(210,'2026-04-24 16:27:27',NULL,372.00,NULL,'COMPLETADA',172.00,1,1),
-(211,'2026-04-27 09:28:13',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1),
-(240,'2026-04-27 21:10:25',NULL,8000.00,NULL,'COMPLETADA',3200.00,1,1),
-(242,'2026-04-27 21:13:39',NULL,5774.00,NULL,'COMPLETADA',2474.00,1,1),
-(244,'2026-04-27 21:16:17',NULL,26000.00,NULL,'COMPLETADA',10400.00,1,1),
-(245,'2026-04-27 22:02:13',NULL,6556.00,NULL,'COMPLETADA',2756.00,1,1),
-(246,'2026-04-27 22:09:00',NULL,2174.00,NULL,'COMPLETADA',874.00,1,1),
-(247,'2026-04-27 22:22:08',NULL,4348.00,NULL,'COMPLETADA',1748.00,1,1),
-(248,'2026-04-27 22:28:00',NULL,2348.00,NULL,'COMPLETADA',948.00,1,1),
-(249,'2026-04-27 22:28:23',NULL,4522.00,NULL,'COMPLETADA',1822.00,1,1),
-(250,'2026-04-27 22:33:34',NULL,4348.00,NULL,'COMPLETADA',1748.00,1,1);
+(1,'2026-04-04 11:47:29',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(2,'2026-04-04 11:52:54',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(3,'2026-04-05 15:05:15',NULL,8000.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(4,'2026-04-05 15:05:51',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(5,'2026-04-05 15:14:54',NULL,2000.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(6,'2026-04-05 15:15:11',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(7,'2026-04-05 15:16:09',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(8,'2026-04-05 15:27:28',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(9,'2026-04-05 15:28:44',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(10,'2026-04-05 15:31:16',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(11,'2026-04-05 15:32:28',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(12,'2026-04-05 15:35:09',NULL,0.00,NULL,'PENDIENTE',NULL,1,1,'EFECTIVO'),
+(13,'2026-04-05 15:35:43',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(14,'2026-04-05 15:39:53',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(15,'2026-04-05 15:52:08',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(16,'2026-04-05 15:58:59',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(17,'2026-04-05 16:01:21',NULL,0.00,'TICKET','COMPLETADA',NULL,1,1,'EFECTIVO'),
+(18,'2026-04-05 16:08:41',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(19,'2026-04-05 16:09:04',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(20,'2026-04-05 16:16:36',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(21,'2026-04-05 16:19:36',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(22,'2026-04-05 16:23:51',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(23,'2026-04-05 16:28:32',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(24,'2026-04-05 16:31:18',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(25,'2026-04-05 16:33:47',NULL,10000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(26,'2026-04-05 16:34:03',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(27,'2026-04-05 17:18:17',NULL,0.00,NULL,'ABIERTA',NULL,1,1,'EFECTIVO'),
+(28,'2026-04-05 17:19:00',NULL,0.00,NULL,'ABIERTA',NULL,1,1,'EFECTIVO'),
+(29,'2026-04-05 17:20:22',NULL,0.00,NULL,'ABIERTA',NULL,1,1,'EFECTIVO'),
+(30,'2026-04-05 17:27:07',NULL,0.00,NULL,'ABIERTA',NULL,1,1,'EFECTIVO'),
+(31,'2026-04-05 17:30:23',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(32,'2026-04-05 17:31:46',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(33,'2026-04-05 17:32:12',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(34,'2026-04-05 17:32:33',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(35,'2026-04-05 17:33:24',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(36,'2026-04-05 17:33:57',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(37,'2026-04-05 17:34:20',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(38,'2026-04-05 17:35:28',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(39,'2026-04-05 17:35:59',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(40,'2026-04-05 17:56:00',NULL,4000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(41,'2026-04-05 18:00:53',NULL,4000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(42,'2026-04-05 18:01:02',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(43,'2026-04-05 18:01:41',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(44,'2026-04-05 18:02:19',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(45,'2026-04-05 18:02:36',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(46,'2026-04-05 18:02:38',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(47,'2026-04-05 18:06:05',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(48,'2026-04-05 18:12:55',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(49,'2026-04-05 18:19:40',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(50,'2026-04-05 18:19:49',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(51,'2026-04-05 18:19:58',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(52,'2026-04-05 18:24:02',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(53,'2026-04-05 18:36:22',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(54,'2026-04-05 18:40:21',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(55,'2026-04-05 18:41:50',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(56,'2026-04-05 18:41:59',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(57,'2026-04-05 18:42:11',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(58,'2026-04-05 18:42:24',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(59,'2026-04-05 18:42:27',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(60,'2026-04-05 18:43:29',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(61,'2026-04-05 18:44:02',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(62,'2026-04-05 18:44:12',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(63,'2026-04-06 18:39:45',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(64,'2026-04-06 18:41:43',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(65,'2026-04-06 18:43:45',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(66,'2026-04-06 18:45:43',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(67,'2026-04-06 18:47:40',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(68,'2026-04-06 18:51:00',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(69,'2026-04-06 18:57:23',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(70,'2026-04-06 18:58:40',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(71,'2026-04-06 19:01:04',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(72,'2026-04-06 19:03:43',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(73,'2026-04-06 19:03:53',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(74,'2026-04-06 19:06:33',NULL,4000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(75,'2026-04-06 19:06:48',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(76,'2026-04-06 19:08:35',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(77,'2026-04-06 19:09:16',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(78,'2026-04-06 19:11:29',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(79,'2026-04-06 19:11:49',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(80,'2026-04-06 19:17:51',NULL,2000.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(81,'2026-04-06 19:18:06',NULL,0.00,NULL,'COMPLETADA',NULL,1,1,'EFECTIVO'),
+(82,'2026-04-06 19:30:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(83,'2026-04-06 19:33:19',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(84,'2026-04-06 19:35:13',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1,'EFECTIVO'),
+(85,'2026-04-06 19:35:25',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(86,'2026-04-06 19:37:47',NULL,8000.00,NULL,'COMPLETADA',8000.00,1,1,'EFECTIVO'),
+(87,'2026-04-06 19:38:01',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(88,'2026-04-06 21:00:13',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(89,'2026-04-06 21:03:38',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(90,'2026-04-06 21:08:41',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(91,'2026-04-06 21:14:07',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1,'EFECTIVO'),
+(92,'2026-04-06 21:14:25',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(93,'2026-04-06 21:23:32',NULL,4000.00,NULL,'COMPLETADA',4000.00,1,1,'EFECTIVO'),
+(94,'2026-04-06 21:24:20',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(95,'2026-04-06 21:24:49',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(96,'2026-04-06 21:27:02',NULL,4000.00,NULL,'COMPLETADA',4000.00,1,1,'EFECTIVO'),
+(97,'2026-04-06 21:27:38',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(98,'2026-04-06 21:29:12',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(99,'2026-04-06 21:36:37',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(100,'2026-04-06 21:54:28',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,'EFECTIVO'),
+(101,'2026-04-06 22:07:55',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(102,'2026-04-06 22:10:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(103,'2026-04-06 22:17:12',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(104,'2026-04-06 22:17:14',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(105,'2026-04-06 22:18:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(106,'2026-04-06 22:18:25',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(107,'2026-04-06 22:18:36',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(108,'2026-04-06 22:20:37',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(109,'2026-04-06 22:20:39',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(110,'2026-04-06 22:21:01',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(111,'2026-04-06 22:21:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(112,'2026-04-06 22:23:08',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(113,'2026-04-06 22:26:19',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(114,'2026-04-08 16:30:18',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1,NULL),
+(115,'2026-04-08 16:30:20',NULL,6000.00,NULL,'COMPLETADA',6000.00,NULL,1,NULL),
+(116,'2026-04-08 16:31:53',NULL,4000.00,NULL,'COMPLETADA',4000.00,NULL,1,NULL),
+(117,'2026-04-08 16:33:02',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(118,'2026-04-08 16:33:32',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1,NULL),
+(119,'2026-04-08 16:33:39',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(120,'2026-04-08 16:34:27',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1,NULL),
+(121,'2026-04-08 16:34:34',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(122,'2026-04-08 16:36:41',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1,NULL),
+(123,'2026-04-08 16:36:47',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(124,'2026-04-08 16:49:33',NULL,2000.00,NULL,'COMPLETADA',2000.00,NULL,1,NULL),
+(125,'2026-04-08 16:49:40',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(126,'2026-04-08 16:55:21',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(127,'2026-04-08 17:39:11',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(128,'2026-04-08 18:14:35',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(129,'2026-04-08 18:15:41',NULL,0.00,NULL,'COMPLETADA',0.00,NULL,1,NULL),
+(130,'2026-04-08 20:06:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(131,'2026-04-08 20:11:20',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(132,'2026-04-08 20:16:47',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(133,'2026-04-08 20:21:07',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(134,'2026-04-08 20:53:26',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(135,'2026-04-08 20:53:35',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(136,'2026-04-08 21:02:02',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(137,'2026-04-08 21:37:46',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(138,'2026-04-09 15:58:50',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(139,'2026-04-13 18:10:43',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(140,'2026-04-13 18:10:56',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(141,'2026-04-13 18:15:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(142,'2026-04-13 18:18:26',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(143,'2026-04-13 18:18:53',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(144,'2026-04-13 18:18:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(145,'2026-04-13 18:22:18',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(146,'2026-04-13 18:22:58',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(147,'2026-04-13 18:29:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(148,'2026-04-13 20:32:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(149,'2026-04-13 20:49:41',NULL,174.00,NULL,'COMPLETADA',74.00,1,1,NULL),
+(150,'2026-04-13 20:50:11',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(151,'2026-04-13 20:50:42',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(152,'2026-04-13 20:57:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(153,'2026-04-13 21:05:53',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(154,'2026-04-13 21:09:16',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(155,'2026-04-13 21:10:03',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(156,'2026-04-13 21:33:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(157,'2026-04-13 21:43:51',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(158,'2026-04-13 21:44:12',NULL,8546.00,NULL,'COMPLETADA',3446.00,1,1,NULL),
+(159,'2026-04-13 21:44:36',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(160,'2026-04-13 22:02:19',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(161,'2026-04-13 22:05:22',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(162,'2026-04-14 11:33:45',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(163,'2026-04-14 11:34:00',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(164,'2026-04-14 11:38:59',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(165,'2026-04-14 12:18:37',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(166,'2026-04-14 12:24:40',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(167,'2026-04-14 12:32:05',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(168,'2026-04-14 12:32:32',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(169,'2026-04-14 12:37:48',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1,NULL),
+(170,'2026-04-14 12:40:01',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1,NULL),
+(171,'2026-04-14 12:40:57',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(172,'2026-04-14 21:01:16',NULL,2000.00,NULL,'COMPLETADA',2000.00,1,1,NULL),
+(173,'2026-04-14 21:11:48',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(174,'2026-04-14 21:14:16',NULL,0.00,NULL,'COMPLETADA',0.00,1,1,NULL),
+(175,'2026-04-14 21:14:29',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(176,'2026-04-14 21:36:19',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(177,'2026-04-14 21:37:05',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(178,'2026-04-14 21:39:12',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(179,'2026-04-14 21:57:39',NULL,4000.00,NULL,'COMPLETADA',1600.00,1,1,NULL),
+(180,'2026-04-14 22:51:35',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(181,'2026-04-14 22:52:57',1,6000.00,NULL,'COMPLETADA',2400.00,1,1,NULL),
+(182,'2026-04-15 10:33:54',NULL,8000.00,NULL,'COMPLETADA',3200.00,1,1,NULL),
+(183,'2026-04-15 11:00:58',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(184,'2026-04-15 11:02:46',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(185,'2026-04-15 11:03:40',NULL,1740.00,NULL,'COMPLETADA',740.00,1,1,NULL),
+(186,'2026-04-15 11:03:53',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(187,'2026-04-15 11:19:03',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(188,'2026-04-15 11:24:55',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(189,'2026-04-15 11:26:27',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(190,'2026-04-15 11:29:35',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(191,'2026-04-15 11:30:33',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(192,'2026-04-15 12:04:48',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(193,'2026-04-15 12:16:51',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(194,'2026-04-15 12:17:47',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(195,'2026-04-15 12:18:43',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(196,'2026-04-15 12:28:51',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(197,'2026-04-15 12:35:49',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(198,'2026-04-15 16:03:56',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(199,'2026-04-15 16:06:41',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(200,'2026-04-15 16:07:05',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(201,'2026-04-15 16:09:36',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(202,'2026-04-15 16:23:57',NULL,174.00,NULL,'COMPLETADA',74.00,1,1,NULL),
+(203,'2026-04-15 16:25:03',NULL,696.00,NULL,'COMPLETADA',296.00,1,1,NULL),
+(204,'2026-04-15 17:43:45',NULL,5580.00,NULL,'COMPLETADA',2580.00,1,1,NULL),
+(205,'2026-04-15 17:44:17',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1,NULL),
+(206,'2026-04-15 17:48:04',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1,NULL),
+(207,'2026-04-16 18:02:53',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1,NULL),
+(208,'2026-04-16 18:07:36',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1,NULL),
+(209,'2026-04-17 10:52:54',NULL,1860.00,NULL,'COMPLETADA',860.00,1,1,NULL),
+(210,'2026-04-24 16:27:27',NULL,372.00,NULL,'COMPLETADA',172.00,1,1,NULL),
+(211,'2026-04-27 09:28:13',NULL,2000.00,NULL,'COMPLETADA',800.00,1,1,NULL),
+(240,'2026-04-27 21:10:25',NULL,8000.00,NULL,'COMPLETADA',3200.00,1,1,NULL),
+(242,'2026-04-27 21:13:39',NULL,5774.00,NULL,'COMPLETADA',2474.00,1,1,NULL),
+(244,'2026-04-27 21:16:17',NULL,26000.00,NULL,'COMPLETADA',10400.00,1,1,NULL),
+(245,'2026-04-27 22:02:13',NULL,6556.00,NULL,'COMPLETADA',2756.00,1,1,NULL),
+(246,'2026-04-27 22:09:00',NULL,2174.00,NULL,'COMPLETADA',874.00,1,1,NULL),
+(247,'2026-04-27 22:22:08',NULL,4348.00,NULL,'COMPLETADA',1748.00,1,1,NULL),
+(248,'2026-04-27 22:28:00',NULL,2348.00,NULL,'COMPLETADA',948.00,1,1,NULL),
+(249,'2026-04-27 22:28:23',NULL,4522.00,NULL,'COMPLETADA',1822.00,1,1,NULL),
+(250,'2026-04-27 22:33:34',NULL,4348.00,NULL,'COMPLETADA',1748.00,1,1,NULL),
+(251,'2026-04-28 19:41:31',NULL,2174.00,NULL,'COMPLETADA',874.00,1,1,NULL);
 /*!40000 ALTER TABLE `ventas` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -2806,6 +3413,42 @@ UNLOCK TABLES;
 --
 -- Dumping routines for database 'facturacion'
 --
+
+--
+-- Final view structure for view `v_camera_summary`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_camera_summary`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`facturacion`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_camera_summary` AS select `c`.`id` AS `camera_id`,`c`.`nombre` AS `camera_name`,`c`.`ip` AS `camera_ip`,`c`.`activo` AS `active`,count(distinct `fd`.`id`) AS `face_detections_today`,count(distinct `od`.`id`) AS `object_detections_today`,count(distinct `ad`.`id`) AS `action_detections_today`,count(distinct `sa`.`id`) AS `alerts_today`,count(distinct `cre`.`id`) AS `recordings_today` from (((((`camaras` `c` left join `face_detections` `fd` on(`c`.`id` = `fd`.`camera_id` and cast(`fd`.`timestamp` as date) = curdate())) left join `object_detections` `od` on(`c`.`id` = `od`.`camera_id` and cast(`od`.`timestamp` as date) = curdate())) left join `action_detections` `ad` on(`c`.`id` = `ad`.`camera_id` and cast(`ad`.`timestamp` as date) = curdate())) left join `security_alerts` `sa` on(`c`.`id` = `sa`.`camera_id` and cast(`sa`.`timestamp` as date) = curdate())) left join `camera_recording_events` `cre` on(`c`.`id` = `cre`.`camera_id` and cast(`cre`.`timestamp` as date) = curdate())) group by `c`.`id`,`c`.`nombre`,`c`.`ip`,`c`.`activo` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_recent_activity`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_recent_activity`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`facturacion`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_recent_activity` AS select 'face_detection' AS `activity_type`,`fd`.`name` AS `description`,`fd`.`camera_id` AS `camera_id`,`fd`.`timestamp` AS `timestamp`,`fd`.`confidence` AS `confidence` from `face_detections` `fd` where `fd`.`timestamp` >= current_timestamp() - interval 1 hour union all select 'object_detection' AS `activity_type`,`od`.`class_name` AS `description`,`od`.`camera_id` AS `camera_id`,`od`.`timestamp` AS `timestamp`,`od`.`confidence` AS `confidence` from `object_detections` `od` where `od`.`timestamp` >= current_timestamp() - interval 1 hour union all select 'security_alert' AS `activity_type`,`sa`.`alert_type` AS `description`,`sa`.`camera_id` AS `camera_id`,`sa`.`timestamp` AS `timestamp`,1 AS `confidence` from `security_alerts` `sa` where `sa`.`timestamp` >= current_timestamp() - interval 1 hour order by `timestamp` desc limit 100 */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -2816,4 +3459,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-28 11:25:16
+-- Dump completed on 2026-05-04 10:36:20

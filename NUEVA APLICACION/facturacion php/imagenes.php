@@ -341,25 +341,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return;
             }
 
-            // Copiar prompt primero si existe
-            const prompt = document.getElementById('prompt').value;
+            // Generar prompt automáticamente si no existe
+            const promptTextarea = document.getElementById('prompt');
+            if (!promptTextarea.value.trim()) {
+                generarPrompt();
+            }
+
+            // Copiar prompt al portapapeles
+            const prompt = promptTextarea.value;
             console.log('Prompt a copiar:', prompt);
             
-            if (prompt) {
-                navigator.clipboard.writeText(prompt).then(() => {
-                    console.log('Prompt copiado exitosamente');
-                    console.log('Abriendo URL:', proveedorActual.url_web);
-                    window.open(proveedorActual.url_web, '_blank');
-                    alert('Prompt copiado. Se abrirá el sitio de IA externa.');
-                }).catch((err) => {
-                    console.error('Error copiando prompt:', err);
-                    console.log('Abriendo URL directamente:', proveedorActual.url_web);
-                    window.open(proveedorActual.url_web, '_blank');
-                });
-            } else {
-                console.log('No hay prompt, abriendo directamente');
+            navigator.clipboard.writeText(prompt).then(() => {
+                console.log('Prompt copiado exitosamente');
+                console.log('Abriendo URL en nueva ventana:', proveedorActual.url_web);
                 window.open(proveedorActual.url_web, '_blank');
-            }
+                alert('✅ Prompt copiado al portapapeles. Se abrirá el sitio de IA externa en una nueva ventana.');
+            }).catch((err) => {
+                console.error('Error copiando prompt:', err);
+                console.log('Abriendo URL directamente:', proveedorActual.url_web);
+                window.open(proveedorActual.url_web, '_blank');
+                alert('⚠️ No se pudo copiar el prompt, pero se abrirá el sitio de IA externa.');
+            });
         }
 
         function enviarABanners() {

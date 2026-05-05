@@ -1,0 +1,132 @@
+REQUISITOS PARA IMPLEMENTACIÓN SFTP DE BANNERS
+================================================
+
+## SERVIDOR LOCAL (donde corre la aplicación PHP)
+
+### 1. Librería PHP: phpseclib3
+Estado: ✅ INSTALADO MANUALMENTE
+Ubicación: /home/pi/facturacion_php/lib/phpseclib3/
+Versión: 3.0.36
+
+Cómo se instaló:
+wget -q https://github.com/phpseclib/phpseclib/archive/refs/tags/3.0.36.tar.gz -O phpseclib.tar.gz
+tar -xzf phpseclib.tar.gz
+mv phpseclib-3.0.36 lib/phpseclib
+rm phpseclib.tar.gz
+
+NO requiere composer
+NO requiere extensiones PHP adicionales
+Funciona con PHP puro
+
+
+## SERVIDOR REMOTO (192.168.31.102 - destino SFTP)
+
+### 1. PHP
+Estado: ✅ INSTALADO
+Comando para verificar: php -v
+Mínimo requerido: PHP 7.0+
+
+### 2. Permisos de escritura
+Estado: ⚠️ REQUIERE CONFIGURACIÓN
+Ruta: /mnt/R2/SD64GB/www/facturacion/html/banners/
+
+Comandos para configurar permisos:
+ssh pi@192.168.31.102
+mkdir -p /mnt/R2/SD64GB/www/facturacion/html/banners/
+sudo chown -R pi:pi /mnt/R2/SD64GB/www/facturacion/html/banners/
+sudo chmod -R 755 /mnt/R2/SD64GB/www/facturacion/html/banners/
+
+### 3. nginx
+Estado: ✅ INSTALADO Y CORRIENDO
+Comando para verificar: systemctl status nginx
+Ruta del sitio: /mnt/R2/SD64GB/www/facturacion/html/
+
+
+## CONFIGURACIÓN
+
+### Archivo: config.php
+Constantes SFTP agregadas:
+define('SFTP_HOST', '192.168.31.102');
+define('SFTP_PORT', '22');
+define('SFTP_USER', 'pi');
+define('SFTP_PASSWORD', 'juanmanuel');
+define('SFTP_REMOTE_PATH', '/mnt/R2/SD64GB/www/facturacion/html/banners/');
+define('SFTP_ENABLED', false);
+
+### Archivo: configurar.php
+Pestaña DLNA agregada con:
+- Campos de configuración SFTP
+- Botón para probar conexión
+- Configurable por empresa desde interfaz
+
+### Archivo: lib/SFTPService.php
+Clase creada para manejar:
+- Conexiones SFTP
+- Copia de archivos
+- Eliminación de archivos
+- Movimiento de archivos
+- Manejo de errores y logging
+
+
+## FUNCIONALIDADES IMPLEMENTADAS
+
+### 1. Subida automática de banners
+Cuando se sube un banner, automáticamente se copía vía SFTP al servidor remoto si está habilitado.
+
+### 2. Eliminación sincronizada
+Cuando se borra un banner, se elimina:
+- Archivo local (proyectar, desactivados, expirados)
+- Miniatura local (thumbnails)
+- Archivo remoto vía SFTP
+- Registro de base de datos
+
+### 3. Prueba de conexión
+Botón en configurar.php → Pestaña DLNA para probar conexión SFTP
+
+
+## PARA PROBAR
+
+1. Configurar en configurar.php → Pestaña DLNA:
+   - Verificar credenciales SFTP
+   - Verificar ruta: /mnt/R2/SD64GB/www/facturacion/html/banners/
+   - Marcar "Habilitar Copia SFTP Automática"
+   - Clic en "PROBAR CONEXIÓN SFTP"
+
+2. Subir un banner en banners.php:
+   - Verificar en php_errors.log el resultado SFTP
+   - Verificar en servidor remoto: ls -la /mnt/R2/SD64GB/www/facturacion/html/banners/
+
+3. Borrar un banner:
+   - Verificar que se elimine local y vía SFTP
+   - Verificar en php_errors.log el resultado
+
+
+## TROUBLESHOOTING
+
+### Error: "No se pudo conectar al servidor SFTP"
+- Verificar credenciales en config.php
+- Verificar que el servidor remoto esté accesible
+- Verificar permisos del usuario pi
+
+### Error: "No se pudo crear directorio remoto"
+- Verificar permisos en /mnt/R2/SD64GB/www/facturacion/html/
+- Ejecutar: sudo chown -R pi:pi /mnt/R2/SD64GB/www/facturacion/html/
+
+### Error: "Copia SFTP no habilitada"
+- Marcar "Habilitar Copia SFTP Automática" en configurar.php
+- Verificar que SFTP_ENABLED = true en config.php
+
+
+## RESUMEN
+
+✅ phpseclib3 - INSTALADO (manual)
+✅ PHP local - FUNCIONANDO
+✅ PHP remoto - INSTALADO
+✅ nginx remoto - INSTALADO Y CORRIENDO
+⚠️ Permisos escritura remoto - REQUIERE CONFIGURACIÓN
+
+TODO:
+1. Configurar permisos en servidor remoto
+2. Probar conexión SFTP desde interfaz
+3. Probar subida de banner con SFTP
+4. Probar eliminación de banner con SFTP

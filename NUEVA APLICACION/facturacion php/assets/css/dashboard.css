@@ -1,0 +1,449 @@
+/* Estilos para el Dashboard - NEXUS POS */
+
+/* Reset y estilos base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #374151 100%);
+    color: #f3f4f6;
+    min-height: 100vh;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Header */
+header {
+    background: #111827;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+header .flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header .px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+header .py-4 {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #a78bfa;
+}
+
+header p {
+    font-size: 0.875rem;
+    color: #9ca3af;
+}
+
+/* Botones */
+.bg-gray-700 {
+    background: #374151;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.bg-gray-700:hover {
+    background: #4b5563;
+}
+
+/* Main content */
+main {
+    padding: 2rem 1rem;
+}
+
+/* Grid para módulos */
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.grid-cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/* Módulos del dashboard */
+.dashboard-module {
+    background: #1f2937;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #374151;
+    text-align: center;
+    text-decoration: none;
+    color: white;
+    transition: all 0.2s;
+    display: block;
+}
+
+.dashboard-module:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-module .text-4xl {
+    font-size: 2.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-module .font-bold {
+    font-weight: bold;
+}
+
+/* Colores específicos para módulos */
+.hover\:border-green-500:hover {
+    border-color: #10b981;
+}
+
+.hover\:border-yellow-500:hover {
+    border-color: #f59e0b;
+}
+
+.hover\:border-purple-500:hover {
+    border-color: #8b5cf6;
+}
+
+.hover\:border-blue-500:hover {
+    border-color: #3b82f6;
+}
+
+.hover\:border-red-500:hover {
+    border-color: #ef4444;
+}
+
+.hover\:border-orange-500:hover {
+    border-color: #f97316;
+}
+
+.hover\:border-indigo-500:hover {
+    border-color: #6366f1;
+}
+
+/* Sección de estadísticas */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #1f2937;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #374151;
+}
+
+.stat-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #9ca3af;
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #10b981;
+}
+
+.stat-card .stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+}
+
+/* Sección de cámaras */
+.camera-section {
+    background: #1f2937;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #374151;
+    margin-bottom: 2rem;
+}
+
+.camera-section h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #9ca3af;
+}
+
+.camera-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.camera-stat {
+    background: #374151;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    text-align: center;
+}
+
+.camera-stat .text-2xl {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* Estados de cámara */
+.text-green-400 {
+    color: #4ade80;
+}
+
+.text-gray-400 {
+    color: #9ca3af;
+}
+
+.text-red-400 {
+    color: #f87171;
+}
+
+/* Botones de edición */
+.edit-mode-btn {
+    background: #3b82f6;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    border: none;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.edit-mode-btn:hover {
+    background: #2563eb;
+}
+
+.edit-mode-btn.bg-green-600 {
+    background: #10b981;
+}
+
+.edit-mode-btn.bg-green-600:hover {
+    background: #059669;
+}
+
+/* Efectos de drag & drop */
+.ring-2 {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.ring-blue-500 {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.cursor-move {
+    cursor: move;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.scale-95 {
+    transform: scale(0.95);
+}
+
+.shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.animate-pulse {
+    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .5;
+    }
+}
+
+/* Contenedor de módulos */
+#dashboard-modules {
+    margin-top: 1rem;
+}
+
+/* Títulos */
+.text-lg {
+    font-size: 1.125rem;
+}
+
+.font-bold {
+    font-weight: bold;
+}
+
+.text-white {
+    color: white;
+}
+
+/* Espaciado */
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.mb-6 {
+    margin-bottom: 1.5rem;
+}
+
+.mb-8 {
+    margin-bottom: 2rem;
+}
+
+/* Flexbox */
+.flex {
+    display: flex;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+/* Notificaciones */
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+.notification.success {
+    background: #10b981;
+}
+
+.notification.error {
+    background: #ef4444;
+}
+
+.notification.info {
+    background: #3b82f6;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .grid-cols-6 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    .grid-cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .camera-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    header .flex {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+/* Contenedores de cámara */
+#camera-status-container,
+#recent-activity-container {
+    background: #374151;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    min-height: 100px;
+}
+
+/* Textos */
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.text-xs {
+    font-size: 0.75rem;
+}
+
+/* Botón de actualizar */
+.bg-gray-600 {
+    background: #4b5563;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    border: none;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.bg-gray-600:hover {
+    background: #6b7280;
+}

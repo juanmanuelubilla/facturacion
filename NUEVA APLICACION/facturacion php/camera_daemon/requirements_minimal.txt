@@ -1,0 +1,27 @@
+# Minimal Camera System Requirements (Pre-compiled packages)
+# Compatible con Raspberry Pi y ARM
+
+# Core dependencies (pre-compiled)
+numpy
+Pillow
+
+# Database & Redis
+redis
+pymysql
+
+# System utilities
+psutil
+python-dotenv
+
+# Web & API
+flask
+requests
+
+# Logging
+loguru
+
+# Video processing (simple)
+ffmpeg-python
+
+# NOTA: OpenCV omitido para evitar compilación
+# Se puede instalar via apt: sudo apt install python3-opencv

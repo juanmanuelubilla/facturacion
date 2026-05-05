@@ -150,45 +150,45 @@ $productos = fetchAll("SELECT p.*, c.nombre as categoria FROM productos p LEFT J
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Código</label>
                             <input type="text" name="codigo" id="codigo"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Código de Barras</label>
                             <input type="text" name="codigo_barra" id="codigo_barra"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600"
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"
                                    placeholder="EAN-13 o dejar vacío para generar automáticamente">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Nombre</label>
                             <input type="text" name="nombre" id="nombre" required
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Descripción</label>
                             <textarea name="descripcion" id="descripcion" rows="2"
-                                      class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600"></textarea>
+                                      class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"></textarea>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="block text-gray-400 text-sm mb-1">Precio</label>
                                 <input type="number" step="0.01" name="precio" id="precio" required
-                                       class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                       class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                             </div>
                             <div>
                                 <label class="block text-gray-400 text-sm mb-1">Costo</label>
                                 <input type="number" step="0.01" name="costo" id="costo"
-                                       class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                       class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                             </div>
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Stock</label>
                             <input type="number" step="0.001" name="stock" id="stock" required
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Categoría</label>
                             <select name="categoria_id" id="categoria_id"
-                                    class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600">
+                                    class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                                 <option value="">Sin categoría</option>
                                 <?php foreach ($categorias as $c): ?>
                                 <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
@@ -198,13 +198,13 @@ $productos = fetchAll("SELECT p.*, c.nombre as categoria FROM productos p LEFT J
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Tags</label>
                             <input type="text" name="tags" id="tags"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600"
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"
                                    placeholder="Separados por coma">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-1">Imagen del Producto</label>
                             <input type="file" name="imagen" id="imagen" accept="image/*"
-                                   class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600"
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600"
                                    onchange="previewImagen()">
                             <input type="hidden" name="imagen_ruta" id="imagen_ruta" value="">
                             <div id="imagenPreview" class="mt-2 hidden">
@@ -223,7 +223,7 @@ $productos = fetchAll("SELECT p.*, c.nombre as categoria FROM productos p LEFT J
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold">
                             💾 GUARDAR PRODUCTO
                         </button>
-                        <button type="button" onclick="limpiarFormulario()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded">
+                        <button type="button" onclick="limpiarFormulario()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 rounded">
                             🧹 LIMPIAR
                         </button>
                     </div>
@@ -236,7 +236,7 @@ $productos = fetchAll("SELECT p.*, c.nombre as categoria FROM productos p LEFT J
                         <input type="hidden" name="accion" value="crear_categoria">
                         <div class="flex gap-2">
                             <input type="text" name="nueva_categoria" required
-                                   class="flex-1 bg-gray-700 text-white p-2 rounded border border-gray-600"
+                                   class="flex-1 bg-gray-700 text-white p-3 rounded border border-gray-600"
                                    placeholder="Nombre categoría">
                             <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
                                 🔍 FILTRAR
@@ -304,6 +304,10 @@ $productos = fetchAll("SELECT p.*, c.nombre as categoria FROM productos p LEFT J
                                 <td class="py-2 px-3 text-sm">
                                     <?php if ($p['imagen']): ?>
                                     <img src="<?= htmlspecialchars($p['imagen']) ?>" alt="<?= htmlspecialchars($p['nombre']) ?>" class="w-12 h-12 object-cover rounded">
+                                    <?php else: ?>
+                                    <div class="w-12 h-12 bg-gray-700 rounded border border-gray-600 flex items-center justify-center text-gray-500">
+                                        📦
+                                    </div>
                                     <?php endif; ?>
                                 </td>
                                 <td class="py-2 px-3 text-sm"><?= htmlspecialchars($p['codigo']) ?></td>

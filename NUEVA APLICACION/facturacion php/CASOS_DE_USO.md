@@ -1,12 +1,33 @@
-# CASOS DE USO PARA PRUEBA DEL SISTEMA DE FACTURACIÓN
+# CASOS DE USO COMPLETOS PARA PRUEBA DEL SISTEMA DE FACTURACIÓN NEXUS POS
 
-## 1. MÓDULO DE AUTENTICACIÓN
+## 📋 PROCEDIMIENTO GENERAL DE PRUEBA
+
+### Antes de Comenzar
+1. **Limpiar caché del navegador**
+2. **Verificar conexión a base de datos**
+3. **Tener datos de prueba listos**
+4. **Documentar cada paso con capturas**
+
+### En Caso de Error
+1. **Capturar pantalla del error**
+2. **Copiar mensaje exacto**
+3. **Verificar consola del navegador (F12)**
+4. **Revisar logs del servidor si es posible**
+5. **Reportar con: URL, acción, datos ingresados, error completo**
+
+---
+
+## 🔐 1. MÓDULO DE AUTENTICACIÓN
 
 ### 1.1 Login de Usuario
-- **Acción**: Ingresar credenciales válidas
 - **URL**: `/login.php`
-- **Datos**: Usuario y contraseña correctos
-- **Resultado esperado**: Acceso al dashboard según rol
+- **Acción**: Ingresar credenciales válidas
+- **Datos**: Usuario: admin, Contraseña: contraseña_correcta
+- **Resultado esperado**: Acceso al dashboard
+- **Errores comunes**:
+  - "Usuario o contraseña incorrectos" → Verificar credenciales
+  - Página blanca → Revisar logs de PHP
+  - Redirección infinita → Limpiar cookies
 
 ### 1.2 Login con credenciales incorrectas
 - **Acción**: Ingresar credenciales inválidas

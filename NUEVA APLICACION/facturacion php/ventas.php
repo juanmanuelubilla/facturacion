@@ -45,14 +45,14 @@ sort($tags);
 $stmt = $db->prepare("SELECT nombre_negocio FROM nombre_negocio WHERE empresa_id = ?");
 $stmt->execute([$empresa_id]);
 $config = $stmt->fetch();
-$nombre_negocio = $config['nombre_negocio'] ?? 'NEXUS POS';
+$nombre_negocio = $config['nombre_negocio'] ?? 'WARP POS';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ventas - NEXUS POS</title>
+    <title>Ventas - WARP POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100">
@@ -106,8 +106,12 @@ $nombre_negocio = $config['nombre_negocio'] ?? 'NEXUS POS';
                          data-tags="<?= htmlspecialchars($p['tags'] ?? '') ?>">
                         <?php if (!empty($p['imagen'])): ?>
                         <div class="w-full h-20 mb-2 rounded overflow-hidden">
-                            <img src="<?= htmlspecialchars($p['imagen']) ?>" alt="<?= htmlspecialchars($p['nombre']) ?>" 
+                            <img src="<?= htmlspecialchars($p['imagen']) ?>" alt="<?= htmlspecialchars($p['nombre']) ?>"
                                  class="w-full h-full object-cover">
+                        </div>
+                        <?php else: ?>
+                        <div class="w-full h-20 mb-2 rounded bg-gray-600 flex items-center justify-center text-gray-400 text-4xl">
+                            📦
                         </div>
                         <?php endif; ?>
                         <h4 class="text-white font-bold text-xs truncate"><?= htmlspecialchars($p['nombre']) ?></h4>
@@ -362,7 +366,7 @@ $nombre_negocio = $config['nombre_negocio'] ?? 'NEXUS POS';
                 container.innerHTML = carrito.map((item, index) =>
                     '<div class="flex justify-between items-center py-2 border-b border-gray-600 cursor-pointer" ondblclick="editarCantidad(' + index + ')" oncontextmenu="mostrarMenuContextual(event, ' + index + ')">' +
                     '<div class="flex items-center gap-3">' +
-                    (item.imagen ? '<img src="' + item.imagen + '" alt="" class="w-12 h-12 object-cover rounded">' : '<div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center text-gray-400">🖼️</div>') +
+                    (item.imagen ? '<img src="' + item.imagen + '" alt="" class="w-12 h-12 object-cover rounded">' : '<div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center text-gray-400">�</div>') +
                     '<div>' +
                     '<p class="text-white text-sm">' + item.nombre + '</p>' +
                     '<p class="text-gray-400 text-xs">$' + item.precio.toFixed(2) + ' x ' + (item.esPesable ? item.cantidad.toFixed(3) : item.cantidad) + (item.esPesable ? ' kg' : ' u') + '</p>' +
@@ -492,6 +496,20 @@ $nombre_negocio = $config['nombre_negocio'] ?? 'NEXUS POS';
             }
 
             if (producto) {
+                // Verificar disponibilidad del producto
+                let permiteVenta = true;
+                let mensajeAdvertencia = '';
+                
+                // Si no hay stock, mostrar advertencia pero permitir venta
+                if (producto.stock <= 0) {
+                    permiteVenta = confirm('⚠️ Este producto no tiene stock disponible.\n\n¿Desea continuar con la venta?\n\nSe recomienda cargar stock pronto.');
+                    if (!permiteVenta) {
+                        document.getElementById('inputCodigo').value = '';
+                        return;
+                    }
+                    mensajeAdvertencia = '🔴 SIN STOCK';
+                }
+                
                 // Si es pesable y no se ingresó cantidad manual, pedir cantidad
                 if (producto.venta_por_peso && !texto.includes('*')) {
                     abrirModalCantidad({
@@ -501,13 +519,14 @@ $nombre_negocio = $config['nombre_negocio'] ?? 'NEXUS POS';
                         imagen: producto.imagen,
                         esPesable: true,
                         stock: producto.stock,
-                        costo: producto.costo
+                        costo: producto.costo,
+                        mensajeAdvertencia: mensajeAdvertencia
                     });
                 } else {
                     agregarProducto(
                         producto.id, producto.nombre, producto.precio,
                         producto.imagen, producto.venta_por_peso, producto.stock,
-                        producto.costo, cantidadManual
+                        producto.costo, cantidadManual, mensajeAdvertencia
                     );
                 }
                 document.getElementById('inputCodigo').value = '';
@@ -864,5 +883,8 @@ $nombre_negocio = $config['nombre_negocio'] ?? 'NEXUS POS';
             }
         });
     </script>
+    
+    <!-- Popup de Reconocimiento Facial -->
+    <?php include 'components/popup_cliente_reconocido.html'; ?>
 </body>
 </html>

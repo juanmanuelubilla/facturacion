@@ -93,7 +93,7 @@ $productos = fetchAll("SELECT id, nombre, codigo, codigo_barra, precio FROM prod
                         </select>
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold">
-                        GENERAR CÓDIGO DE BARRAS
+                        🏷️ GENERAR CÓDIGO DE BARRAS
                     </button>
                 </div>
             </form>

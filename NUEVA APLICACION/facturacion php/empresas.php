@@ -90,7 +90,7 @@ $empresas = fetchAll("SELECT id, nombre, cuit, activo FROM empresas ORDER BY id 
                         <div>
                             <label class="block text-gray-400 text-sm mb-2">ID Empresa</label>
                             <input type="number" id="inputId" readonly
-                                   class="w-full bg-gray-600 text-white p-3 rounded border border-gray-600">
+                                   class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
                         <div>
                             <label class="block text-gray-400 text-sm mb-2">Nombre de Negocio</label>
@@ -102,8 +102,8 @@ $empresas = fetchAll("SELECT id, nombre, cuit, activo FROM empresas ORDER BY id 
                             <input type="text" name="cuit" id="cuit"
                                    class="w-full bg-gray-700 text-white p-3 rounded border border-gray-600">
                         </div>
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded font-bold">
-                            GUARDAR CAMBIOS
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded font-bold">
+                            💾 GUARDAR CAMBIOS
                         </button>
                         <button type="button" onclick="toggleEstado()" id="btnToggle" disabled
                                 class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded disabled:opacity-50">

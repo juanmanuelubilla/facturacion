@@ -10,8 +10,8 @@ class EmpresaFiles {
     
     public function __construct($empresa_id, $base_path = null) {
         $this->empresa_id = $empresa_id;
-        // Usar ruta relativa desde el directorio de la aplicación
-        $this->base_path = $base_path ?: 'files/';
+        // Usar ruta absoluta del servidor web
+        $this->base_path = $base_path ?: '/mnt/R2/SD64GB/www/facturacion/html/files/';
     }
     
     /**
@@ -30,6 +30,11 @@ class EmpresaFiles {
         $subcarpetas = [
             'productos',
             'banners',
+            'banners/proyectar',  // Carpeta DLNA para proyectar (activos)
+            'banners/thumbnails',  // Miniaturas separadas del contenido DLNA
+            'banners/expirados',  // Banners expirados por fecha (no DLNA)
+            'banners/desactivados', // Banners desactivados manualmente (no DLNA)
+            'avisos',  // Imágenes de avisos
             'ia',
             'tickets',
             'logos',
@@ -80,25 +85,70 @@ class EmpresaFiles {
     }
     
     /**
-     * Obtener ruta de banners con estructura año/mes tipo WordPress
+     * Obtener ruta de banners (estructura plana, sin año/mes)
      */
     public function getBannersPath() {
         $empresa_path = $this->getEmpresaPath();
-        $year = date('Y');
-        $month = date('m');
-        return $empresa_path . 'banners/' . $year . '/' . $month . '/';
+        return $empresa_path . 'banners/proyectar/';
     }
     
     /**
-     * Obtener ruta absoluta de banners con estructura año/mes
+     * Obtener ruta absoluta de banners (estructura plana)
      */
     public function getBannersPathAbsoluta() {
         $empresa_path_absoluta = $this->getEmpresaPathAbsoluta();
-        $year = date('Y');
-        $month = date('m');
-        return $empresa_path_absoluta . 'banners/' . $year . '/' . $month . '/';
+        return $empresa_path_absoluta . 'banners/proyectar/';
     }
     
+    /**
+     * Obtener ruta de miniaturas de banners (separada del contenido DLNA)
+     */
+    public function getBannersThumbnailsPath() {
+        $empresa_path = $this->getEmpresaPath();
+        return $empresa_path . 'banners/thumbnails/';
+    }
+    
+    /**
+     * Obtener ruta absoluta de miniaturas de banners
+     */
+    public function getBannersThumbnailsPathAbsoluta() {
+        $empresa_path_absoluta = $this->getEmpresaPathAbsoluta();
+        return $empresa_path_absoluta . 'banners/thumbnails/';
+    }
+    
+    /**
+     * Obtener ruta de banners expirados (no DLNA)
+     */
+    public function getBannersExpiradosPath() {
+        $empresa_path = $this->getEmpresaPath();
+        return $empresa_path . 'banners/expirados/';
+    }
+    
+    /**
+     * Obtener ruta absoluta de banners expirados
+     */
+    public function getBannersExpiradosPathAbsoluta() {
+        $empresa_path_absoluta = $this->getEmpresaPathAbsoluta();
+        return $empresa_path_absoluta . 'banners/expirados/';
+    }
+    
+    /**
+     * Obtener ruta de banners desactivados (no DLNA)
+     */
+    public function getBannersDesactivadosPath() {
+        $empresa_path = $this->getEmpresaPath();
+        return $empresa_path . 'banners/desactivados/';
+    }
+    
+    /**
+     * Obtener ruta absoluta de banners desactivados
+     */
+    public function getBannersDesactivadosPathAbsoluta() {
+        $empresa_path_absoluta = $this->getEmpresaPathAbsoluta();
+        return $empresa_path_absoluta . 'banners/desactivados/';
+    }
+    
+        
     /**
      * Obtener ruta de imágenes generadas por IA
      */
@@ -220,6 +270,38 @@ class EmpresaFiles {
         }
         
         return true;
+    }
+    
+    /**
+     * Obtener ruta de avisos (imágenes de avisos)
+     */
+    public function getAvisosPath() {
+        $empresa_path = $this->getEmpresaPath();
+        return $empresa_path . 'avisos/';
+    }
+    
+    /**
+     * Obtener ruta absoluta de avisos
+     */
+    public function getAvisosPathAbsoluta() {
+        $empresa_path_absoluta = $this->getEmpresaPathAbsoluta();
+        return $empresa_path_absoluta . 'avisos/';
+    }
+    
+    /**
+     * Obtener ruta de videos (grabaciones de cámaras)
+     */
+    public function getVideosPath() {
+        $empresa_path = $this->getEmpresaPath();
+        return $empresa_path . 'videos/';
+    }
+    
+    /**
+     * Obtener ruta absoluta de videos (grabaciones de cámaras)
+     */
+    public function getVideosPathAbsoluta() {
+        $empresa_path_absoluta = $this->getEmpresaPathAbsoluta();
+        return $empresa_path_absoluta . 'videos/';
     }
 }
 ?>
